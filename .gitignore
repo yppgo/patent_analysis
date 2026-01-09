@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# Data files (可能包含敏感信息)
+data/
+downloads/
+downloads_selenium/
+
+# Output files
+outputs/
+test_outputs/
+batch_*_results/
+
+# Neo4j
+neo4j/data/
+neo4j/logs/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archive
+_archive/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Large files
+*.xlsx
+*.csv
+*.json
+!config/*.json
+!sandbox/static/data/*.json
