@@ -64,6 +64,10 @@ Thumbs.db
 # Archive
 _archive/
 
+# Personal files
+毕业设计/
+毕设参考文献/
+
 # Temporary files
 *.tmp
 *.bak
