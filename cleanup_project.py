@@ -7,6 +7,7 @@
 
 import os
 import shutil
+import glob
 
 # 要删除的临时测试文件（根目录）
 temp_test_files = [
@@ -42,6 +43,70 @@ keep_test_files = [
 old_docs = [
     "docs/PROMPT_FIX_SUMMARY.md",  # 临时文档
 ]
+
+# outputs目录中要保留的文件
+keep_outputs = [
+    "outputs/hypothesis_generation_test_result.json",  # 假设生成测试结果
+    "outputs/layered_recommendation_result.json",  # 分层推荐测试结果
+    "outputs/strategist_dual_graph_test_result.json",  # Strategist测试结果
+    "outputs/causal_extraction_v3/",  # 最新版本的因果图谱提取结果
+]
+
+# outputs目录中要删除的模式
+delete_output_patterns = [
+    "outputs/debug_response_*.txt",  # 所有debug响应文件
+    "outputs/step_*.py",  # 旧的步骤脚本
+    "outputs/step_*.pkl",  # 旧的模型文件
+    "outputs/step_*.csv",  # 旧的结果文件
+    "outputs/e2e_*.json",  # 旧的端到端测试结果
+    "outputs/dag_test_result.json",  # 旧的DAG测试结果
+    "outputs/methodologist_v5_dag_test.json",  # 旧的Methodologist测试
+    "outputs/strategist_v5_dag_demo.json",  # 旧的demo结果
+]
+
+# 要删除的旧版本目录
+delete_output_dirs = [
+    "outputs/causal_extraction/",  # v1版本
+    "outputs/causal_extraction_v2/",  # v2版本
+    "outputs/method_extraction/",  # 旧的方法提取结果
+]
+
+def cleanup_outputs():
+    """清理outputs目录"""
+    deleted_count = 0
+    
+    print("\n4. 清理outputs目录...")
+    
+    # 删除匹配模式的文件
+    for pattern in delete_output_patterns:
+        files = glob.glob(pattern)
+        for file in files:
+            try:
+                os.remove(file)
+                print(f"  ✓ 删除: {file}")
+                deleted_count += 1
+            except Exception as e:
+                print(f"  ✗ 删除失败: {file} - {e}")
+    
+    # 删除旧版本目录
+    for dir_path in delete_output_dirs:
+        if os.path.exists(dir_path):
+            try:
+                shutil.rmtree(dir_path)
+                print(f"  ✓ 删除目录: {dir_path}")
+                deleted_count += 1
+            except Exception as e:
+                print(f"  ✗ 删除失败: {dir_path} - {e}")
+    
+    # 显示保留的文件
+    print("\n5. 保留的outputs文件:")
+    for file in keep_outputs:
+        if os.path.exists(file):
+            print(f"  ✓ 保留: {file}")
+        else:
+            print(f"  ⚠ 不存在: {file}")
+    
+    return deleted_count
 
 def cleanup():
     """执行清理"""
@@ -83,8 +148,11 @@ def cleanup():
         else:
             print(f"  ⚠ 不存在: {file}")
     
+    # 清理outputs目录
+    deleted_count += cleanup_outputs()
+    
     print("\n" + "=" * 60)
-    print(f"清理完成！共删除 {deleted_count} 个文件")
+    print(f"清理完成！共删除 {deleted_count} 个文件/目录")
     print("=" * 60)
     
     # 显示当前测试文件列表
