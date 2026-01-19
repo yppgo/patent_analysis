@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>因果本体论浏览器 - Causal Ontology Explorer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        select, input {
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            display: flex;
+            height: calc(100vh - 300px);
+        }
+
+        #graph-container {
+            flex: 1;
+            position: relative;
+            background: #fafbfc;
+        }
+
+        #info-panel {
+            width: 400px;
+            background: white;
+            border-left: 1px solid #dee2e6;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .variable-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .variable-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .variable-id {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .badge-input { background: #ff6b6b; color: white; }
+        .badge-mediator { background: #4ecdc4; color: white; }
+        .badge-outcome { background: #f38181; color: white; }
+        .badge-moderator { background: #95e1d3; color: white; }
+
+        .detail-item {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .detail-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .legend h4 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .path-list {
+            margin-top: 15px;
+        }
+
+        .path-item {
+            padding: 10px;
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .path-item:hover {
+            background: #d0e7ff;
+            transform: translateX(5px);
+        }
+
+        .path-arrow {
+            font-weight: bold;
+            color: #667eea;
+            margin: 0 5px;
+        }
+
+        .evidence-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            margin-left: 5px;
+        }
+
+        .evidence-validated {
+            background: #28a745;
+            color: white;
+        }
+
+        .evidence-exploratory {
+            background: #ffc107;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 因果本体论浏览器</h1>
+            <p>Patent Analysis Causal Ontology Explorer</p>
+            <div class="stats" id="stats">
+                <!-- 统计信息将由 JS 填充 -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>变量类别:</label>
+                <select id="category-filter">
+                    <option value="all">全部</option>
+                    <option value="input">输入变量</option>
+                    <option value="mediator">中介变量</option>
+                    <option value="outcome">结果变量</option>
+                    <option value="moderator">调节变量</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>路径类型:</label>
+                <select id="path-filter">
+                    <option value="all">全部</option>
+                    <option value="validated">已验证</option>
+                    <option value="exploratory">探索性</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>搜索:</label>
+                <input type="text" id="search-box" placeholder="搜索变量或路径...">
+            </div>
+            <button onclick="resetView()">🔄 重置视图</button>
+            <button onclick="showAllPaths()">📊 显示所有路径</button>
+        </div>
+
+        <div class="main-content">
+            <div id="graph-container">
+                <svg id="graph"></svg>
+                <div class="legend">
+                    <h4>变量类型</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6b6b;"></div>
+                        <span>输入变量 (8)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4ecdc4;"></div>
+                        <span>中介变量 (7)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f38181;"></div>
+                        <span>结果变量 (6)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #95e1d3;"></div>
+                        <span>调节变量 (4)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="info-panel">
+                <h3>📖 详细信息</h3>
+                <p style="color: #6c757d; text-align: center; margin-top: 30px;">
+                    点击节点或路径查看详细信息
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ontology = null;
+        let simulation = null;
+        let selectedNode = null;
+
+        // 加载数据 - 支持多种路径
+        const possiblePaths = [
+            'static/data/complete_causal_ontology.json',
+            './static/data/complete_causal_ontology.json',
+            '../static/data/complete_causal_ontology.json'
+        ];
+
+        async function loadData() {
+            for (const path of possiblePaths) {
+                try {
+                    const response = await fetch(path);
+                    if (response.ok) {
+                        ontology = await response.json();
+                        console.log('✓ 数据加载成功:', path);
+                        initStats();
+                        initGraph();
+                        return;
+                    }
+                } catch (error) {
+                    console.log(`尝试路径 ${path} 失败:`, error.message);
+                }
+            }
+            
+            // 如果所有路径都失败
+            console.error('❌ 无法从文件加载数据');
+            document.getElementById('info-panel').innerHTML = 
+                '<p style="color: red; text-align: center; padding: 50px;">无法加载数据文件。请确保文件路径正确。</p>';
+        }
+
+        loadData();
+
+        function initStats() {
+            const stats = document.getElementById('stats');
+            stats.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${ontology.meta.total_variables}</div>
+                    <div class="stat-label">变量总数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${ontology.meta.total_paths}</div>
+                    <div class="stat-label">因果路径</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${ontology.path_statistics.validated_paths}</div>
+                    <div class="stat-label">已验证路径</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${ontology.path_statistics.exploratory_paths}</div>
+                    <div class="stat-label">探索性路径</div>
+                </div>
+            `;
+        }
+
+        function initGraph() {
+            const container = document.getElementById('graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            const svg = d3.select('#graph')
+                .attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g');
+
+            // 缩放功能
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+
+            // 颜色映射
+            const colorMap = {
+                'input': '#ff6b6b',
+                'mediator': '#4ecdc4',
+                'outcome': '#f38181',
+                'moderator': '#95e1d3'
+            };
+
+            // 准备图数据
+            const nodes = ontology.variables.map(v => ({
+                id: v.id,
+                label: v.label,
+                category: v.category,
+                ...v
+            }));
+
+            const links = ontology.causal_paths
+                .filter(p => !p.moderates && !p.mediator && !p.interaction)
+                .map(p => ({
+                    source: p.source,
+                    target: p.target,
+                    ...p
+                }));
+
+            // 创建力导向图
+            simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+                .force('charge', d3.forceManyBody().strength(-500))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(60));
+
+            // 箭头标记
+            svg.append('defs').selectAll('marker')
+                .data(['end'])
+                .enter().append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 30)
+                .attr('refY', 0)
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('fill', '#999');
+
+            // 绘制连线
+            const link = g.append('g')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', d => d.evidence.validated ? '#28a745' : '#ffc107')
+                .attr('stroke-width', d => d.effect_size === 'large' ? 3 : 2)
+                .attr('stroke-opacity', 0.6)
+                .attr('marker-end', 'url(#arrowhead)')
+                .on('click', (event, d) => showPathInfo(d));
+
+            // 绘制节点
+            const node = g.append('g')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            node.append('circle')
+                .attr('r', 25)
+                .attr('fill', d => colorMap[d.category])
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 3)
+                .style('cursor', 'pointer')
+                .on('click', (event, d) => showNodeInfo(d))
+                .on('mouseover', function(event, d) {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .attr('r', 30);
+                    
+                    // 高亮相关路径
+                    link.attr('stroke-opacity', l => 
+                        (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.1
+                    );
+                })
+                .on('mouseout', function() {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .attr('r', 25);
+                    
+                    link.attr('stroke-opacity', 0.6);
+                });
+
+            node.append('text')
+                .attr('dy', 45)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '11px')
+                .attr('font-weight', 'bold')
+                .attr('fill', '#333')
+                .text(d => d.label);
+
+            // 更新位置
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+
+        function showNodeInfo(node) {
+            selectedNode = node;
+            
+            const badgeClass = `badge-${node.category}`;
+            
+            // 查找相关路径
+            const outgoingPaths = ontology.causal_paths.filter(p => 
+                p.source === node.id && !p.moderates && !p.mediator
+            );
+            const incomingPaths = ontology.causal_paths.filter(p => 
+                p.target === node.id && !p.moderates && !p.mediator
+            );
+            const moderationPaths = ontology.causal_paths.filter(p => 
+                p.source === node.id && p.moderates
+            );
+            const mediationPaths = ontology.causal_paths.filter(p => 
+                p.mediator === node.id
+            );
+
+            let html = `
+                <div class="variable-card">
+                    <div class="variable-header">
+                        <div class="variable-id">${node.id}</div>
+                        <span class="badge ${badgeClass}">${node.category}</span>
+                    </div>
+                    <h3>${node.label}</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">定义</div>
+                        <div class="detail-value">${node.definition}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">测量方式</div>
+                        <div class="detail-value">
+                            <strong>指标:</strong> ${node.measurement.metric}<br>
+                            <strong>公式:</strong> ${node.measurement.formula}<br>
+                            <strong>数据源:</strong> ${node.measurement.data_source}
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">理论依据</div>
+                        <div class="detail-value">
+                            <strong>${node.theory.name}</strong><br>
+                            ${node.theory.key_scholars}<br>
+                            <em>${node.theory.core_argument}</em>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (outgoingPaths.length > 0) {
+                html += `<h4 style="margin-top: 20px;">📤 输出路径 (${outgoingPaths.length})</h4>`;
+                html += '<div class="path-list">';
+                outgoingPaths.forEach(p => {
+                    const target = ontology.variables.find(v => v.id === p.target);
+                    const evidenceBadge = p.evidence.validated ? 
+                        '<span class="evidence-badge evidence-validated">已验证</span>' :
+                        '<span class="evidence-badge evidence-exploratory">探索性</span>';
+                    html += `
+                        <div class="path-item" onclick='showPathInfo(${JSON.stringify(p)})'>
+                            <strong>${node.label}</strong>
+                            <span class="path-arrow">→</span>
+                            <strong>${target.label}</strong>
+                            ${evidenceBadge}
+                            <div style="font-size: 0.85em; color: #6c757d; margin-top: 5px;">
+                                ${p.mechanism}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            if (incomingPaths.length > 0) {
+                html += `<h4 style="margin-top: 20px;">📥 输入路径 (${incomingPaths.length})</h4>`;
+                html += '<div class="path-list">';
+                incomingPaths.forEach(p => {
+                    const source = ontology.variables.find(v => v.id === p.source);
+                    const evidenceBadge = p.evidence.validated ? 
+                        '<span class="evidence-badge evidence-validated">已验证</span>' :
+                        '<span class="evidence-badge evidence-exploratory">探索性</span>';
+                    html += `
+                        <div class="path-item" onclick='showPathInfo(${JSON.stringify(p)})'>
+                            <strong>${source.label}</strong>
+                            <span class="path-arrow">→</span>
+                            <strong>${node.label}</strong>
+                            ${evidenceBadge}
+                            <div style="font-size: 0.85em; color: #6c757d; margin-top: 5px;">
+                                ${p.mechanism}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            if (moderationPaths.length > 0) {
+                html += `<h4 style="margin-top: 20px;">⚙️ 调节作用 (${moderationPaths.length})</h4>`;
+                html += '<div class="path-list">';
+                moderationPaths.forEach(p => {
+                    html += `
+                        <div class="path-item">
+                            调节路径: ${p.moderates}<br>
+                            <em>${p.mechanism}</em>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('info-panel').innerHTML = html;
+        }
+
+        function showPathInfo(path) {
+            const source = ontology.variables.find(v => v.id === path.source);
+            const target = ontology.variables.find(v => v.id === path.target);
+
+            const evidenceBadge = path.evidence.validated ? 
+                '<span class="evidence-badge evidence-validated">已验证</span>' :
+                '<span class="evidence-badge evidence-exploratory">探索性</span>';
+
+            let html = `
+                <div class="variable-card">
+                    <h3>📊 因果路径详情</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">路径ID</div>
+                        <div class="detail-value">${path.path_id} ${evidenceBadge}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">因果关系</div>
+                        <div class="detail-value" style="font-size: 1.1em;">
+                            <strong>${source.label}</strong>
+                            <span class="path-arrow">→</span>
+                            <strong>${target.label}</strong>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">效应类型</div>
+                        <div class="detail-value">${path.effect_type}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">效应大小</div>
+                        <div class="detail-value">${path.effect_size}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">作用机制</div>
+                        <div class="detail-value">${path.mechanism}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">实证证据</div>
+                        <div class="detail-value">
+                            <strong>验证状态:</strong> ${path.evidence.validated ? '已验证' : '探索性'}<br>
+                            <strong>文献数量:</strong> ${path.evidence.evidence_count} 篇<br>
+                            <strong>代表性文献:</strong> ${path.evidence.key_papers.join(', ')}<br>
+                            ${path.evidence.validated_domains.length > 0 ? 
+                                `<strong>验证领域:</strong> ${path.evidence.validated_domains.join(', ')}` : 
+                                '<strong>验证领域:</strong> 尚未验证'}
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">假设模板</div>
+                        <div class="detail-value" style="background: #e7f3ff; padding: 10px; border-radius: 4px;">
+                            ${path.hypothesis_template}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('info-panel').innerHTML = html;
+        }
+
+        function resetView() {
+            if (simulation) {
+                simulation.alpha(1).restart();
+            }
+        }
+
+        function showAllPaths() {
+            let html = '<h3>📊 所有因果路径</h3>';
+            
+            const pathsByType = {
+                'direct': ontology.causal_paths.filter(p => !p.moderates && !p.mediator && !p.interaction),
+                'moderation': ontology.causal_paths.filter(p => p.moderates),
+                'mediation': ontology.causal_paths.filter(p => p.mediator),
+                'interaction': ontology.causal_paths.filter(p => p.interaction)
+            };
+
+            Object.entries(pathsByType).forEach(([type, paths]) => {
+                if (paths.length > 0) {
+                    const typeLabels = {
+                        'direct': '直接效应',
+                        'moderation': '调节效应',
+                        'mediation': '中介效应',
+                        'interaction': '交互效应'
+                    };
+                    html += `<h4 style="margin-top: 20px;">${typeLabels[type]} (${paths.length})</h4>`;
+                    html += '<div class="path-list">';
+                    paths.forEach(p => {
+                        const evidenceBadge = p.evidence && p.evidence.validated ? 
+                            '<span class="evidence-badge evidence-validated">已验证</span>' :
+                            '<span class="evidence-badge evidence-exploratory">探索性</span>';
+                        
+                        let pathDesc = '';
+                        if (type === 'direct') {
+                            const source = ontology.variables.find(v => v.id === p.source);
+                            const target = ontology.variables.find(v => v.id === p.target);
+                            pathDesc = `${source.label} → ${target.label}`;
+                        } else if (type === 'moderation') {
+                            const moderator = ontology.variables.find(v => v.id === p.source);
+                            pathDesc = `${moderator.label} 调节 ${p.moderates}`;
+                        } else if (type === 'mediation') {
+                            const mediator = ontology.variables.find(v => v.id === p.mediator);
+                            const source = ontology.variables.find(v => v.id === p.source);
+                            const target = ontology.variables.find(v => v.id === p.target);
+                            pathDesc = `${source.label} → ${mediator.label} → ${target.label}`;
+                        } else if (type === 'interaction') {
+                            pathDesc = `${p.interaction.join(' × ')} → ${p.target}`;
+                        }
+                        
+                        html += `
+                            <div class="path-item" onclick='showPathInfo(${JSON.stringify(p)})'>
+                                <strong>${pathDesc}</strong>
+                                ${evidenceBadge}
+                                <div style="font-size: 0.85em; color: #6c757d; margin-top: 5px;">
+                                    ${p.mechanism}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            });
+
+            document.getElementById('info-panel').innerHTML = html;
+        }
+
+        // 搜索功能
+        document.getElementById('search-box').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (!query) return;
+
+            const matchedVars = ontology.variables.filter(v => 
+                v.label.toLowerCase().includes(query) ||
+                v.definition.toLowerCase().includes(query)
+            );
+
+            if (matchedVars.length > 0) {
+                showNodeInfo(matchedVars[0]);
+            }
+        });
+    </script>
+</body>
+</html>

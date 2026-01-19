@@ -21,7 +21,7 @@ class LLMClient:
     
     def __init__(
         self,
-        model: str = "qwen-max",
+        model: str = "qwen3-max",
         temperature: float = 0.7,  # 提高到 0.7，增加多样性
         api_key: Optional[str] = None,
         base_url: Optional[str] = None

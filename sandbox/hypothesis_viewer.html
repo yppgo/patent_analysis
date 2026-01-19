@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科研假设生成器 - 端到端演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .pipeline {
+            display: flex;
+            justify-content: space-between;
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            overflow-x: auto;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 0 10px;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #dee2e6;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-number {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .step-label {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .step.active .step-label {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .step::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 20px;
+            font-size: 1.5em;
+            color: #dee2e6;
+        }
+
+        .step:last-child::after {
+            display: none;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hypothesis-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .hypothesis-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .hypothesis-card.recommended {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .hypothesis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .hypothesis-id {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-novelty {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-recommended {
+            background: #28a745;
+            color: white;
+        }
+
+        .hypothesis-statement {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .hypothesis-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .detail-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .score-bar {
+            height: 8px;
+            background: #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #dee2e6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .variable-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .variable-tag {
+            padding: 5px 12px;
+            background: #e7f3ff;
+            border: 1px solid #667eea;
+            border-radius: 16px;
+            font-size: 0.9em;
+            color: #667eea;
+        }
+
+        .analysis-plan {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .task-item {
+            background: white;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .task-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+        }
+
+        .rank-badge.rank-1 {
+            background: #ffc107;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 科研假设生成器</h1>
+            <p>Patent Analysis Hypothesis Generator - 端到端演示</p>
+        </div>
+
+        <div class="pipeline">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">用户输入</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">意图分析</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">变量匹配</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">文献检查</div>
+            </div>
+            <div class="step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-label">假设生成</div>
+            </div>
+            <div class="step" data-step="6">
+                <div class="step-number">6</div>
+                <div class="step-label">排序推荐</div>
+            </div>
+        </div>
+
+        <div class="content" id="content">
+            <!-- 内容将由 JavaScript 动态加载 -->
+        </div>
+
+        <div class="nav-buttons">
+            <button id="prevBtn" onclick="changeStep(-1)" disabled>← 上一步</button>
+            <button id="nextBtn" onclick="changeStep(1)">下一步 →</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let data = null;
+
+        // 加载数据
+        fetch('static/data/hypothesis_example.json')
+            .then(response => response.json())
+            .then(jsonData => {
+                data = jsonData;
+                renderStep(currentStep);
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('content').innerHTML = 
+                    '<p style="color: red; text-align: center; padding: 50px;">无法加载数据文件</p>';
+            });
+
+        function changeStep(direction) {
+            currentStep += direction;
+            if (currentStep < 1) currentStep = 1;
+            if (currentStep > 6) currentStep = 6;
+            
+            updatePipeline();
+            renderStep(currentStep);
+            updateButtons();
+        }
+
+        function updatePipeline() {
+            document.querySelectorAll('.step').forEach(step => {
+                const stepNum = parseInt(step.dataset.step);
+                if (stepNum === currentStep) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentStep === 1;
+            document.getElementById('nextBtn').disabled = currentStep === 6;
+        }
+
+        function renderStep(step) {
+            if (!data) return;
+            
+            const content = document.getElementById('content');
+            let html = '';
+
+            switch(step) {
+                case 1:
+                    html = renderStep1();
+                    break;
+                case 2:
+                    html = renderStep2();
+                    break;
+                case 3:
+                    html = renderStep3();
+                    break;
+                case 4:
+                    html = renderStep4();
+                    break;
+                case 5:
+                    html = renderStep5();
+                    break;
+                case 6:
+                    html = renderStep6();
+                    break;
+            }
+
+            content.innerHTML = html;
+        }
+
+        function renderStep1() {
+            const input = data.user_input;
+            return `
+                <h2>📝 步骤1：用户输入</h2>
+                <div class="hypothesis-card">
+                    <div class="detail-item">
+                        <div class="detail-label">研究领域</div>
+                        <div class="detail-value" style="font-size: 1.5em; color: #667eea;">${input.query}</div>
+                    </div>
+                    <div class="detail-item" style="margin-top: 20px;">
+                        <div class="detail-label">研究目标</div>
+                        <div class="detail-value">${input.research_goal}</div>
+                    </div>
+                    <div class="detail-item" style="margin-top: 20px;">
+                        <div class="detail-label">提交时间</div>
+                        <div class="detail-value">${input.timestamp}</div>
+                    </div>
+                </div>
+                <p style="color: #6c757d; margin-top: 20px;">
+                    💡 系统将基于此输入，自动生成多个创新性研究假设
+                </p>
+            `;
+        }
+
+        function renderStep2() {
+            const intent = data.step1_intent_analysis;
+            return `
+                <h2>🎯 步骤2：意图分析</h2>
+                <div class="hypothesis-card">
+                    <div class="detail-item">
+                        <div class="detail-label">识别的研究意图</div>
+                        <div class="detail-value" style="font-size: 1.3em; color: #667eea;">
+                            ${intent.detected_intent}
+                        </div>
+                    </div>
+                    <div class="detail-item" style="margin-top: 20px;">
+                        <div class="detail-label">提取的关键词</div>
+                        <div class="variable-list">
+                            ${intent.extracted_keywords.map(k => 
+                                `<span class="variable-tag">${k}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div class="detail-item" style="margin-top: 20px;">
+                        <div class="detail-label">匹配的结果变量</div>
+                        <div class="detail-value">${intent.matched_outcome_variable}</div>
+                    </div>
+                </div>
+                <p style="color: #6c757d; margin-top: 20px;">
+                    ✅ 系统理解了你的研究意图，接下来将匹配相关变量
+                </p>
+            `;
+        }
+
+        function renderStep3() {
+            const vars = data.step2_variable_matching;
+            return `
+                <h2>🔗 步骤3：变量匹配</h2>
+                
+                <h3 style="margin-top: 20px;">因变量（研究目标）</h3>
+                <div class="hypothesis-card">
+                    <div class="hypothesis-header">
+                        <div class="hypothesis-id">${vars.outcome_variable.label}</div>
+                        <span class="badge" style="background: #28a745; color: white;">结果变量</span>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">测量方式</div>
+                        <div class="detail-value">${vars.outcome_variable.measurement}</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px;">候选自变量（潜在驱动因素）</h3>
+                ${vars.candidate_predictors.map(v => `
+                    <div class="hypothesis-card">
+                        <div class="hypothesis-header">
+                            <div class="hypothesis-id" style="font-size: 1.2em;">${v.label}</div>
+                            <span class="badge" style="background: #667eea; color: white;">自变量</span>
+                        </div>
+                        <div class="hypothesis-details">
+                            <div class="detail-item">
+                                <div class="detail-label">测量方式</div>
+                                <div class="detail-value">${v.measurement}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">理论依据</div>
+                                <div class="detail-value">${v.theory}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+
+                <h3 style="margin-top: 30px;">候选调节变量（边界条件）</h3>
+                ${vars.candidate_moderators.map(v => `
+                    <div class="hypothesis-card">
+                        <div class="hypothesis-header">
+                            <div class="hypothesis-id" style="font-size: 1.2em;">${v.label}</div>
+                            <span class="badge" style="background: #ffc107; color: #000;">调节变量</span>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">测量方式</div>
+                            <div class="detail-value">${v.measurement}</div>
+                        </div>
+                    </div>
+                `).join('')}
+
+                <p style="color: #6c757d; margin-top: 20px;">
+                    ✅ 共匹配到 ${vars.candidate_predictors.length} 个自变量和 ${vars.candidate_moderators.length} 个调节变量
+                </p>
+            `;
+        }
+
+        function renderStep4() {
+            const lit = data.step3_literature_check;
+            return `
+                <h2>📚 步骤4：文献检查</h2>
+                
+                <h3 style="margin-top: 20px;">已验证的因果路径</h3>
+                ${lit.validated_paths.map(p => `
+                    <div class="hypothesis-card">
+                        <div class="hypothesis-header">
+                            <div class="hypothesis-id" style="font-size: 1.2em;">${p.path}</div>
+                            <span class="badge ${p.quantum_computing_validated ? 'badge-recommended' : ''}" 
+                                  style="background: ${p.quantum_computing_validated ? '#28a745' : '#dc3545'}; color: white;">
+                                ${p.quantum_computing_validated ? '已在量子计算验证' : '未在量子计算验证'}
+                            </span>
+                        </div>
+                        <div class="hypothesis-details">
+                            <div class="detail-item">
+                                <div class="detail-label">已验证领域</div>
+                                <div class="detail-value">${p.validated_in.join(', ')}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">文献支持</div>
+                                <div class="detail-value">${p.evidence_count} 篇论文</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">代表性文献</div>
+                                <div class="detail-value">${p.key_papers.join(', ')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+
+                <h3 style="margin-top: 30px;">未探索的因果路径 🌟</h3>
+                ${lit.unexplored_paths.map(p => `
+                    <div class="hypothesis-card" style="border-color: #ffc107;">
+                        <div class="hypothesis-header">
+                            <div class="hypothesis-id" style="font-size: 1.2em; color: #ffc107;">${p.path}</div>
+                            <span class="badge badge-novelty">高新颖性</span>
+                        </div>
+                        <div class="hypothesis-details">
+                            <div class="detail-item">
+                                <div class="detail-label">未研究原因</div>
+                                <div class="detail-value">${p.reason}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">理论合理性</div>
+                                <div class="detail-value">${p.theoretical_plausibility}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+
+                <p style="color: #6c757d; margin-top: 20px;">
+                    💡 发现 ${lit.unexplored_paths.length} 个未充分研究的路径，具有高创新潜力
+                </p>
+            `;
+        }
+
+        function renderStep5() {
+            const hyps = data.step4_hypothesis_generation.generated_hypotheses;
+            return `
+                <h2>💡 步骤5：假设生成</h2>
+                <p style="color: #6c757d; margin-bottom: 20px;">
+                    基于6种策略，共生成 ${hyps.length} 个研究假设
+                </p>
+
+                ${hyps.map(h => `
+                    <div class="hypothesis-card ${h.id === 'H2' ? 'recommended' : ''}">
+                        <div class="hypothesis-header">
+                            <div class="hypothesis-id">${h.id}</div>
+                            <div>
+                                <span class="badge" style="background: #667eea; color: white;">${h.type}</span>
+                                ${h.id === 'H2' ? '<span class="badge badge-recommended">推荐</span>' : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="hypothesis-statement">${h.statement}</div>
+                        
+                        <div class="detail-item">
+                            <div class="detail-label">生成策略</div>
+                            <div class="detail-value">${h.strategy_description}</div>
+                        </div>
+
+                        <div class="hypothesis-details">
+                            <div class="detail-item">
+                                <div class="detail-label">新颖性评分</div>
+                                <div class="detail-value">${h.novelty_analysis.novelty_score}</div>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: ${h.novelty_analysis.novelty_score * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">数据可获得性</div>
+                                <div class="detail-value">${h.feasibility.data_availability}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">计算复杂度</div>
+                                <div class="detail-value">${h.feasibility.computational_complexity}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-item" style="margin-top: 15px;">
+                            <div class="detail-label">理论依据</div>
+                            <div class="detail-value">${h.theoretical_basis.theory}</div>
+                            <p style="margin-top: 5px; color: #6c757d; font-size: 0.9em;">
+                                ${h.theoretical_basis.mechanism}
+                            </p>
+                        </div>
+
+                        <div class="detail-item" style="margin-top: 15px;">
+                            <div class="detail-label">预期贡献</div>
+                            <div class="detail-value">${h.expected_contribution}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function renderStep6() {
+            const ranking = data.step5_hypothesis_ranking;
+            const plan = data.step6_analysis_plan;
+            
+            return `
+                <h2>🏆 步骤6：假设排序与分析方案</h2>
+                
+                <h3 style="margin-top: 20px;">假设排序结果</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>假设</th>
+                            <th>新颖性</th>
+                            <th>可行性</th>
+                            <th>理论基础</th>
+                            <th>实践价值</th>
+                            <th>总分</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ranking.ranked_hypotheses.map(h => {
+                            const hyp = data.step4_hypothesis_generation.generated_hypotheses
+                                .find(x => x.id === h.hypothesis_id);
+                            return `
+                                <tr>
+                                    <td><span class="rank-badge rank-${h.rank}">${h.rank}</span></td>
+                                    <td><strong>${h.hypothesis_id}</strong>: ${hyp.statement.substring(0, 50)}...</td>
+                                    <td>${h.scores.novelty.toFixed(2)}</td>
+                                    <td>${h.scores.feasibility.toFixed(2)}</td>
+                                    <td>${h.scores.theoretical_grounding.toFixed(2)}</td>
+                                    <td>${h.scores.practical_value.toFixed(2)}</td>
+                                    <td><strong>${h.total_score.toFixed(3)}</strong></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+
+                <div class="hypothesis-card recommended" style="margin-top: 30px;">
+                    <h3>🎯 推荐假设：${plan.recommended_hypothesis}</h3>
+                    <div class="hypothesis-statement">${plan.research_design.hypothesis}</div>
+                    <div class="detail-item">
+                        <div class="detail-label">推荐理由</div>
+                        <div class="detail-value">
+                            ${ranking.ranked_hypotheses[0].recommendation_reason}
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px;">📋 分析方案（DAG任务）</h3>
+                <div class="analysis-plan">
+                    ${plan.research_design.dag_tasks.map((task, idx) => `
+                        <div class="task-item">
+                            <div class="task-title">
+                                ${task.task_id}: ${task.task_name}
+                            </div>
+                            <p style="color: #6c757d; margin-top: 8px;">
+                                <strong>目标：</strong>${task.objective}
+                            </p>
+                            ${task.implementation ? `
+                                <p style="color: #6c757d; margin-top: 8px;">
+                                    <strong>方法：</strong>${task.implementation.method}
+                                </p>
+                            ` : ''}
+                            ${task.outputs ? `
+                                <div style="margin-top: 10px;">
+                                    <strong>输出：</strong>
+                                    <div class="variable-list">
+                                        ${Object.keys(task.outputs).map(k => 
+                                            `<span class="variable-tag">${k}: ${task.outputs[k]}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="hypothesis-card" style="margin-top: 30px; background: #e7f3ff;">
+                    <h4>📊 研究预期</h4>
+                    <div class="hypothesis-details">
+                        <div class="detail-item">
+                            <div class="detail-label">预计研究周期</div>
+                            <div class="detail-value">${data.metadata.estimated_research_duration}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">预期发表层次</div>
+                            <div class="detail-value">${data.metadata.expected_publication_tier}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3 style="color: #28a745;">✅ 假设生成完成！</h3>
+                    <p style="color: #6c757d; margin-top: 10px;">
+                        系统已为您生成 ${data.step4_hypothesis_generation.generated_hypotheses.length} 个创新性研究假设，
+                        并推荐了最优假设及完整的分析方案。
+                    </p>
+                    <button onclick="location.reload()" style="margin-top: 20px; background: #28a745;">
+                        🔄 重新开始
+                    </button>
+                </div>
+            `;
+        }
+
+        // 初始化
+        updateButtons();
+    </script>
+</body>
+</html>
