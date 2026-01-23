@@ -10,7 +10,7 @@ from typing import List, Optional
 
 def get_columns_from_file(
     file_path: str, 
-    sheet_name: str = 'clear',
+    sheet_name: str = 'sheet1',
     nrows: int = 0
 ) -> List[str]:
     """
@@ -40,7 +40,7 @@ def get_columns_from_file(
 def get_available_columns(
     file_path: Optional[str] = None,
     manual_columns: Optional[List[str]] = None,
-    sheet_name: str = 'clear'
+    sheet_name: str = 'sheet1'
 ) -> Optional[List[str]]:
     """
     获取可用列名（智能选择）

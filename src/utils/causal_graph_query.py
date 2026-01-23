@@ -558,24 +558,53 @@ class CausalGraphQuery:
         
         return hypotheses
     
+    def _is_trivial_hypothesis(self, indep_var: str, dep_var: str) -> tuple:
+        """
+        检查是否是常识性假设（在生成阶段就过滤）
+        
+        Returns:
+            (is_trivial: bool, reason: str or None)
+        """
+        trivial_patterns = [
+            ("V22_tech_maturity", "V16_tech_impact", "专利年龄→被引用是时间累积效应"),
+            ("V01_tech_intensity", "V16_tech_impact", "专利数量→影响力是资源差异"),
+            ("V02_firm_size", "V16_tech_impact", "企业规模→影响力是资源差异"),
+            ("V02_firm_size", "V01_tech_intensity", "企业规模→专利数量是资源差异"),
+        ]
+        
+        for indep, dep, reason in trivial_patterns:
+            if indep == indep_var and dep == dep_var:
+                return True, reason
+        return False, None
+    
     def _strategy_theory_transfer(self, matching: Dict, literature: Dict) -> List[Dict]:
         """
         策略1: 理论迁移
         
         将已验证的理论应用到新领域（假设用户的领域是新的）
+        ⚠️ 增加常识性假设过滤
         """
         hypotheses = []
         validated_paths = literature.get("validated_paths", [])
         
-        # 只取1个最佳的已验证路径
-        for i, vpath in enumerate(validated_paths[:1]):  # 从2个减少到1个
+        # 只取1个最佳的非常识性已验证路径
+        count = 0
+        for vpath in validated_paths:
+            if count >= 1:
+                break
             source_var = self.variables.get(vpath['source'])
             target_var = self.variables.get(vpath['target'])
             path = vpath['path']
             
+            # ⚠️ 跳过常识性假设
+            is_trivial, reason = self._is_trivial_hypothesis(vpath['source'], vpath['target'])
+            if is_trivial:
+                continue
+            
             if source_var and target_var:
+                count += 1
                 hypothesis = {
-                    "id": f"H_transfer_{i+1}",
+                    "id": f"H_transfer_{count}",
                     "statement": f"{source_var['label']}对{target_var['label']}有{self._effect_type_cn(path['effect_type'])}影响",
                     "type": "theory_transfer",
                     "strategy_description": "理论迁移：将已验证的理论应用到新领域",
@@ -603,18 +632,28 @@ class CausalGraphQuery:
         策略2: 路径探索
         
         探索文献中未研究过的因果路径
+        ⚠️ 增加常识性假设过滤
         """
         hypotheses = []
         unexplored_paths = literature.get("unexplored_paths", [])
         
-        # 只取1个最有潜力的未探索路径
-        for i, upath in enumerate(unexplored_paths[:1]):  # 从2个减少到1个
+        # 只取1个最有潜力的非常识性未探索路径
+        count = 0
+        for upath in unexplored_paths:
+            if count >= 1:
+                break
             source_var = self.variables.get(upath['source'])
             target_var = self.variables.get(upath['target'])
             
+            # ⚠️ 跳过常识性假设
+            is_trivial, _ = self._is_trivial_hypothesis(upath['source'], upath['target'])
+            if is_trivial:
+                continue
+            
             if source_var and target_var:
+                count += 1
                 hypothesis = {
-                    "id": f"H_exploration_{i+1}",
+                    "id": f"H_exploration_{count}",
                     "statement": f"{source_var['label']}对{target_var['label']}的影响（探索性假设）",
                     "type": "path_exploration",
                     "strategy_description": "路径探索：发现文献空白",
@@ -642,41 +681,47 @@ class CausalGraphQuery:
         策略3: 边界条件
         
         为已知关系寻找调节变量
+        ⚠️ 增加常识性假设过滤
         """
         hypotheses = []
         validated_paths = literature.get("validated_paths", [])
         moderators = matching.get("candidate_moderators", [])
         
-        # 取第1个已验证路径和第1个调节变量
-        if validated_paths and moderators:
-            vpath = validated_paths[0]
-            moderator = moderators[0]
-            
-            source_var = self.variables.get(vpath['source'])
-            target_var = self.variables.get(vpath['target'])
-            
-            if source_var and target_var:
-                hypothesis = {
-                    "id": "H_moderation_1",
-                    "statement": f"{moderator['label']}调节{source_var['label']}对{target_var['label']}的影响",
-                    "type": "moderation",
-                    "strategy_description": "边界条件：揭示理论的适用范围",
-                    "novelty_score": 0.65,
-                    "variables": {
-                        "independent": [vpath['source']],
-                        "dependent": [vpath['target']],
-                        "moderator": [moderator['id']],
-                        "mediator": []
-                    },
-                    "theoretical_basis": f"{moderator.get('definition', '')}影响作用强度",
-                    "evidence": {
-                        "validated": False,
-                        "evidence_count": 0,
-                        "note": "调节效应待验证"
-                    },
-                    "mechanism": f"{moderator['label']}改变{source_var['label']}的作用强度"
-                }
-                hypotheses.append(hypothesis)
+        # 取第1个非常识性已验证路径和第1个调节变量
+        if moderators:
+            for vpath in validated_paths:
+                # ⚠️ 跳过常识性假设
+                is_trivial, _ = self._is_trivial_hypothesis(vpath['source'], vpath['target'])
+                if is_trivial:
+                    continue
+                    
+                moderator = moderators[0]
+                source_var = self.variables.get(vpath['source'])
+                target_var = self.variables.get(vpath['target'])
+                
+                if source_var and target_var:
+                    hypothesis = {
+                        "id": "H_moderation_1",
+                        "statement": f"{moderator['label']}调节{source_var['label']}对{target_var['label']}的影响",
+                        "type": "moderation",
+                        "strategy_description": "边界条件：揭示理论的适用范围",
+                        "novelty_score": 0.65,
+                        "variables": {
+                            "independent": [vpath['source']],
+                            "dependent": [vpath['target']],
+                            "moderator": [moderator['id']],
+                            "mediator": []
+                        },
+                        "theoretical_basis": f"{moderator.get('definition', '')}影响作用强度",
+                        "evidence": {
+                            "validated": False,
+                            "evidence_count": 0,
+                            "note": "调节效应待验证"
+                        },
+                        "mechanism": f"{moderator['label']}改变{source_var['label']}的作用强度"
+                    }
+                    hypotheses.append(hypothesis)
+                    break  # 只取一个
         
         return hypotheses
     
@@ -685,6 +730,7 @@ class CausalGraphQuery:
         策略4: 中介机制
         
         揭示因果关系的中介机制（2跳路径：X → M → Y）
+        ⚠️ 增加常识性假设过滤
         """
         hypotheses = []
         outcome_var = matching.get("outcome_variable")
@@ -695,13 +741,19 @@ class CausalGraphQuery:
         
         outcome_var_id = outcome_var['id']
         
-        # 找到所有中介路径
+        # 找到所有非常识性中介路径
         mediation_paths = []
         for mediator in mediators[:5]:  # 检查前5个中介变量
             mediator_id = mediator['id']
             # 查找 X → M → Y 的路径
             for predictor in matching.get("candidate_predictors", [])[:10]:
                 predictor_id = predictor['id']
+                
+                # ⚠️ 跳过常识性假设（X→Y 是常识）
+                is_trivial, _ = self._is_trivial_hypothesis(predictor_id, outcome_var_id)
+                if is_trivial:
+                    continue
+                
                 # 检查是否存在 X → M 和 M → Y
                 path_xm = self.find_direct_path(predictor_id, mediator_id)
                 path_my = self.find_direct_path(mediator_id, outcome_var_id)
@@ -809,14 +861,19 @@ class CausalGraphQuery:
         策略5: 反事实推理
         
         基于理论推导反直觉的假设
+        ⚠️ 增加常识性假设过滤
         """
         hypotheses = []
         # 这个策略需要数据支持，暂时生成一个示例
         
         # 示例：在某些条件下，常见的正向关系可能变为负向
         validated_paths = literature.get("validated_paths", [])
-        if validated_paths:
-            vpath = validated_paths[0]
+        for vpath in validated_paths:
+            # ⚠️ 跳过常识性假设
+            is_trivial, _ = self._is_trivial_hypothesis(vpath['source'], vpath['target'])
+            if is_trivial:
+                continue
+                
             source_var = self.variables.get(vpath['source'])
             target_var = self.variables.get(vpath['target'])
             
@@ -842,6 +899,7 @@ class CausalGraphQuery:
                     "mechanism": "待数据分析发现"
                 }
                 hypotheses.append(hypothesis)
+                break  # 只取一个
         
         return hypotheses
     
@@ -850,15 +908,29 @@ class CausalGraphQuery:
         策略6: 交互效应
         
         探索多个变量的联合作用
+        ⚠️ 增加常识性假设过滤
         """
         hypotheses = []
         predictors = matching.get("candidate_predictors", [])
         outcome_var = matching.get("outcome_variable")
         
         if len(predictors) >= 2 and outcome_var:
-            # 取前2个预测变量
-            var1 = predictors[0]
-            var2 = predictors[1]
+            # 过滤掉常识性变量，取前2个非常识性预测变量
+            non_trivial_predictors = []
+            for p in predictors:
+                is_trivial, _ = self._is_trivial_hypothesis(p['id'], outcome_var['id'])
+                if not is_trivial:
+                    non_trivial_predictors.append(p)
+                if len(non_trivial_predictors) >= 2:
+                    break
+            
+            if len(non_trivial_predictors) >= 2:
+                var1 = non_trivial_predictors[0]
+                var2 = non_trivial_predictors[1]
+            else:
+                # 如果非常识性变量不足2个，使用原始的前2个
+                var1 = predictors[0]
+                var2 = predictors[1]
             
             hypothesis = {
                 "id": "H_interaction_1",
@@ -892,6 +964,8 @@ class CausalGraphQuery:
         1. 核心推荐（3个）：综合分最高、新颖性最高、质量最高
         2. 备选推荐（2-3个）：其他高分假设
         3. 完整列表：所有假设供参考
+        
+        ⚠️ 增加创新性约束：过滤常识性假设，优先推荐有洞察力的假设
         """
         if not hypotheses:
             return {
@@ -901,50 +975,85 @@ class CausalGraphQuery:
                 "summary": "未生成假设"
             }
         
+        # 常识性假设模式（这些假设容易产出没有洞察力的结论）
+        trivial_patterns = [
+            # (自变量, 因变量, 原因)
+            ("V22_tech_maturity", "V16_tech_impact", "专利年龄→被引用是时间累积效应，常识"),
+            ("V01_tech_intensity", "V16_tech_impact", "专利数量→影响力是资源差异，常识"),
+            ("V02_firm_size", "V16_tech_impact", "企业规模→影响力是资源差异，常识"),
+        ]
+        
         # 为每个假设计算综合分和质量分
         for h in hypotheses:
             novelty = h['novelty_score']
             quality = h.get('path_quality', {}).get('score', 50)  # 单跳假设默认50分
             
+            # ⚠️ 检查是否是常识性假设，降低其分数
+            insight_penalty = 0
+            trivial_reason = None
+            indep_vars = h.get('variables', {}).get('independent', [])
+            dep_vars = h.get('variables', {}).get('dependent', [])
+            
+            for indep, dep, reason in trivial_patterns:
+                if indep in indep_vars and dep in dep_vars:
+                    insight_penalty = 0.3  # 常识性假设扣30%
+                    trivial_reason = reason
+                    break
+            
+            # 有中介变量的假设更有价值（机制解释）
+            mediators = h.get('variables', {}).get('mediator', [])
+            insight_bonus = 0.1 if mediators else 0
+            
+            # 调整后的新颖性分数
+            adjusted_novelty = max(0.3, novelty - insight_penalty + insight_bonus)
+            
             # 平衡型综合分（新颖性60% + 质量40%）
-            balanced_score = novelty * 0.6 + (quality / 100) * 0.4
+            balanced_score = adjusted_novelty * 0.6 + (quality / 100) * 0.4
             
             h['evaluation'] = {
                 'novelty_score': novelty,
+                'adjusted_novelty': round(adjusted_novelty, 2),
                 'quality_score': quality,
-                'balanced_score': round(balanced_score, 3)
+                'balanced_score': round(balanced_score, 3),
+                'trivial_warning': trivial_reason  # 标记常识性假设
             }
         
-        # 排序
+        # 排序（使用调整后的分数）
         by_balanced = sorted(hypotheses, key=lambda h: h['evaluation']['balanced_score'], reverse=True)
-        by_novelty = sorted(hypotheses, key=lambda h: h['evaluation']['novelty_score'], reverse=True)
+        by_novelty = sorted(hypotheses, key=lambda h: h['evaluation']['adjusted_novelty'], reverse=True)  # 使用调整后的新颖性
         by_quality = sorted(hypotheses, key=lambda h: h['evaluation']['quality_score'], reverse=True)
         
-        # 核心推荐（3个）
+        # 过滤掉常识性假设（不作为核心推荐，但保留在备选中）
+        non_trivial = [h for h in by_balanced if not h['evaluation'].get('trivial_warning')]
+        
+        # 核心推荐（3个）- 优先选择非常识性假设
         core_recommendations = []
         selected_ids = set()
         
-        # 1. 综合分最高
-        if by_balanced:
-            top_balanced = by_balanced[0]
+        # 1. 综合分最高（优先非常识性）
+        candidates = non_trivial if non_trivial else by_balanced
+        if candidates:
+            top_balanced = candidates[0]
+            warning = top_balanced['evaluation'].get('trivial_warning')
             core_recommendations.append({
                 "rank": 1,
-                "priority": "核心推荐",
+                "priority": "核心推荐" if not warning else "核心推荐⚠️",
                 "hypothesis": top_balanced,
                 "reason": f"综合分最高（{top_balanced['evaluation']['balanced_score']:.3f}），平衡创新与可靠性",
                 "recommendation_type": "balanced"
             })
             selected_ids.add(top_balanced['id'])
         
-        # 2. 新颖性最高（如果与综合分最高不同）
+        # 2. 新颖性最高（使用调整后分数，如果与综合分最高不同）
         if by_novelty:
             top_novelty = by_novelty[0]
             if top_novelty['id'] not in selected_ids:
+                adj_novelty = top_novelty['evaluation']['adjusted_novelty']
                 core_recommendations.append({
                     "rank": 2,
                     "priority": "核心推荐",
                     "hypothesis": top_novelty,
-                    "reason": f"新颖性最高（{top_novelty['evaluation']['novelty_score']}），潜在突破性发现",
+                    "reason": f"洞察力最高（调整后新颖性{adj_novelty}），潜在突破性发现",
                     "recommendation_type": "innovative"
                 })
                 selected_ids.add(top_novelty['id'])
@@ -952,11 +1061,12 @@ class CausalGraphQuery:
                 # 如果重复，选第二高新颖性的
                 if len(by_novelty) > 1:
                     second_novelty = by_novelty[1]
+                    adj_novelty = second_novelty['evaluation']['adjusted_novelty']
                     core_recommendations.append({
                         "rank": 2,
                         "priority": "核心推荐",
                         "hypothesis": second_novelty,
-                        "reason": f"新颖性高（{second_novelty['evaluation']['novelty_score']}），探索性研究价值",
+                        "reason": f"洞察力高（调整后新颖性{adj_novelty}），探索性研究价值",
                         "recommendation_type": "innovative"
                     })
                     selected_ids.add(second_novelty['id'])

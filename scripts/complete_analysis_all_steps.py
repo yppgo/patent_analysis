@@ -28,7 +28,7 @@ def main():
     
     # 加载数据
     print("\n📥 [2/5] 加载真实数据...")
-    df = pd.read_excel('data/clean_patents1_with_topics_filled.xlsx', sheet_name='clear')
+    df = pd.read_excel('data/new_data.XLSX', sheet_name='sheet1')
     df = df[['标题(译)(简体中文)', '摘要(译)(简体中文)', 'IPC主分类号', 'Topic_Label']].copy()
     df.columns = ['标题', '摘要', 'IPC', '主题标签']
     df = df.dropna(subset=['标题', '摘要'])

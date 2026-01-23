@@ -1,6 +1,7 @@
 import subprocess
 import os
 import glob
+import re
 from pathlib import Path
 
 class OSTools:
@@ -21,16 +22,36 @@ class OSTools:
             # Windows 命令适配
             if os.name == 'nt':  # Windows 系统
                 # 替换常见的 Unix 命令为 Windows 命令
-                if command.startswith('ls '):
-                    command = command.replace('ls ', 'dir ', 1)
-                elif command == 'ls':
-                    command = 'dir'
-                elif command.startswith('mkdir -p '):
+                cmd = command.strip()
+
+                # ls / ls -la / ls -l / ls -la path -> dir path
+                # Windows 的 dir 不支持 -la 这类开关（会报“无效开关”），因此直接丢弃 unix flags。
+                m = re.match(r"^ls(\s+.+)?$", cmd)
+                if m:
+                    rest = (m.group(1) or "").strip()
+                    if not rest:
+                        command = "dir"
+                    else:
+                        tokens = rest.split()
+                        path_tokens = [t for t in tokens if not t.startswith('-')]
+                        if path_tokens:
+                            command = "dir " + " ".join(path_tokens)
+                        else:
+                            command = "dir"
+
+                # head -n 5 file -> powershell Get-Content -TotalCount 5 file
+                m = re.match(r"^head\s+-n\s+(\d+)\s+(.+)$", cmd)
+                if m:
+                    n = m.group(1)
+                    file_path = m.group(2).strip().strip('"')
+                    command = f'powershell -NoProfile -Command "Get-Content -TotalCount {n} -Path \"{file_path}\""'
+
+                if cmd.startswith('mkdir -p '):
                     # Windows 的 mkdir 自动创建父目录
-                    command = command.replace('mkdir -p ', 'mkdir ', 1)
-                elif command.startswith('cat '):
-                    command = command.replace('cat ', 'type ', 1)
-                elif command == 'pwd':
+                    command = cmd.replace('mkdir -p ', 'mkdir ', 1)
+                elif cmd.startswith('cat '):
+                    command = cmd.replace('cat ', 'type ', 1)
+                elif cmd == 'pwd':
                     command = 'cd'
             
             # 根据系统选择合适的编码

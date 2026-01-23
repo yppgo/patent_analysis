@@ -143,36 +143,80 @@ class LLMClient:
         return cls(model=model, temperature=temperature)
 
 
-def get_llm_client(model: str = None, temperature: float = 0.3):
+def get_llm_client(model: str = None, temperature: float = 0.3, env_prefix: str = ""):
     """
     获取 LLM 客户端的便捷函数
     
     Args:
         model: 模型名称（可选，默认从环境变量读取）
         temperature: 温度参数
+        env_prefix: 环境变量前缀（如 "CODING_"）
         
     Returns:
-        LLM 实例（ChatOpenAI 或 ChatTongyi）
+        LLM 实例（ChatOpenAI, ChatAnthropic 或 ChatTongyi）
     """
-    provider = os.getenv("LLM_PROVIDER", "dashscope")
+    def _get_env(key: str, default: Optional[str] = None, env_prefix: str = "") -> Optional[str]:
+        """读取环境变量，支持按前缀隔离不同 Agent 的配置。"""
+        if env_prefix:
+            v = os.getenv(f"{env_prefix}{key}")
+            if v is not None and v != "":
+                return v
+        v = os.getenv(key)
+        if v is not None and v != "":
+            return v
+        return default
+
+    provider = _get_env("LLM_PROVIDER", "dashscope", env_prefix=env_prefix)
     
     if provider == "openai":
-        api_key = os.getenv("OPENAI_API_KEY")
-        model = model or os.getenv("OPENAI_MODEL", "gpt-4")
+        api_key = _get_env("OPENAI_API_KEY", env_prefix=env_prefix)
+        model = model or _get_env("OPENAI_MODEL", "gpt-4", env_prefix=env_prefix)
+        base_url = _get_env("OPENAI_BASE_URL", env_prefix=env_prefix)
         
         if not api_key:
             raise ValueError("请设置 OPENAI_API_KEY 环境变量")
+
+        kwargs: Dict[str, Any] = {
+            "model": model,
+            "openai_api_key": api_key,
+            "temperature": temperature,
+        }
+        if base_url:
+            kwargs["openai_api_base"] = base_url
+
+        return ChatOpenAI(**kwargs)
+    
+    elif provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
         
-        return ChatOpenAI(
-            model=model,
-            openai_api_key=api_key,
-            temperature=temperature
-        )
+        api_key = _get_env("ANTHROPIC_API_KEY", env_prefix=env_prefix)
+        model = model or _get_env("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929", env_prefix=env_prefix)
+        base_url = _get_env("ANTHROPIC_BASE_URL", env_prefix=env_prefix)
+        
+        if not api_key:
+            raise ValueError("请设置 ANTHROPIC_API_KEY 环境变量")
+        
+        kwargs: Dict[str, Any] = {
+            "model": model,
+            "anthropic_api_key": api_key,
+            "temperature": temperature,
+        }
+        # 注意：langchain_anthropic的base_url不需要包含/v1，它会自动添加
+        if base_url:
+            # 移除末尾的/v1，因为ChatAnthropic会自动添加
+            base_url = base_url.rstrip('/v1').rstrip('/')
+            kwargs["base_url"] = base_url
+        
+        return ChatAnthropic(**kwargs)
     
     elif provider == "dashscope":
-        api_key = os.getenv("DASHSCOPE_API_KEY")
-        model = model or os.getenv("DASHSCOPE_MODEL", "qwen3-max")
-        base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        api_key = _get_env("DASHSCOPE_API_KEY", env_prefix=env_prefix)
+        model = model or _get_env("DASHSCOPE_MODEL", "qwen3-max", env_prefix=env_prefix)
+        base_url = _get_env(
+            "DASHSCOPE_BASE_URL",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            env_prefix=env_prefix,
+        )
         
         if not api_key:
             raise ValueError("请设置 DASHSCOPE_API_KEY 环境变量")

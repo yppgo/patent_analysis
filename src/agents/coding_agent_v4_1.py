@@ -531,7 +531,7 @@ Path('outputs').mkdir(exist_ok=True)
 print("开始执行分析...")
 
 # 1. 加载主数据（必须包含，不能注释掉！）
-df = pd.read_excel('data/clean_patents1_with_topics_filled.xlsx', sheet_name='clear')
+df = pd.read_excel('data/new_data.XLSX', sheet_name='sheet1')
 
 # 2. 如果需要前一步的结果，从文件加载并合并
 # ⚠️ 重要：根据需求决定是否需要合并

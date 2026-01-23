@@ -1,9 +1,13 @@
+import os
 import sys
 import io
 import contextlib
 import traceback
 import pandas as pd
 import numpy as np
+
+if os.name == "nt":
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 class PythonREPL:
     """

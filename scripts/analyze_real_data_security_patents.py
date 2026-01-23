@@ -1,6 +1,6 @@
 """
 使用真实数据进行技术空白识别分析
-数据来源: data/clean_patents1_with_topics_filled.xlsx (clear sheet)
+数据来源: data/new_data.XLSX (sheet1)
 方法: Angle-Based Outlier Detection (ABOD)
 """
 
@@ -12,8 +12,8 @@ from typing import Dict
 import warnings
 warnings.filterwarnings('ignore')
 
-def load_real_patent_data(file_path: str = 'data/clean_patents1_with_topics_filled.xlsx', 
-                          sheet_name: str = 'clear',
+def load_real_patent_data(file_path: str = 'data/new_data.XLSX', 
+                          sheet_name: str = 'sheet1',
                           sample_size: int = 500) -> pd.DataFrame:
     """
     加载真实的专利数据

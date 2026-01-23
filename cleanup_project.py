@@ -42,6 +42,9 @@ keep_test_files = [
 # 要删除的旧文档
 old_docs = [
     "docs/PROMPT_FIX_SUMMARY.md",  # 临时文档
+    "docs/GRAPH_USAGE_FLOWCHART.md",  # 与GRAPH_ARCHITECTURE_DEFINITION.md重复
+    "docs/METHOD_GRAPH_EXTRACTION_PLAN.md",  # 历史计划文档，提取已完成
+    "docs/STAGE2_COMPLETION_SUMMARY.md",  # 阶段性总结，已归档到IMPLEMENTATION_PLAN.md
 ]
 
 # outputs目录中要保留的文件

@@ -12,8 +12,9 @@ Strategist Agent V5.0 - 战略智能体
 
 import json
 import pandas as pd
-from typing import Dict, Any, List, Set, Tuple
+from typing import Dict, Any, List, Set, Tuple, Optional
 from src.agents.base_agent import BaseAgent
+from src.utils.data_preview import DataPreview
 
 
 class StrategistAgent(BaseAgent):
@@ -49,8 +50,8 @@ class StrategistAgent(BaseAgent):
         self.neo4j = neo4j_connector  # 保留用于向后兼容，但不再使用
         self.causal_graph = causal_graph
         self.method_graph = method_graph
-        self.data_file = data_file or "data/clean_patents1_with_topics_filled.xlsx"
-        self.sheet_name = "clear"
+        self.data_file = data_file or "data/new_data.XLSX"
+        self.sheet_name = "sheet1"
     
     def _load_real_columns(self) -> List[str]:
         """
@@ -170,6 +171,22 @@ class StrategistAgent(BaseAgent):
             lines.append("")
         
         return "\n".join(lines)
+
+    def _select_top_core_hypothesis(self, recommended_hypotheses: Optional[Dict]) -> Optional[Dict]:
+        """仅保留评分最高的核心推荐假设用于验证。"""
+        if not recommended_hypotheses:
+            return None
+
+        core_recs = recommended_hypotheses.get('core_recommendations', [])
+        if not core_recs:
+            return recommended_hypotheses
+
+        top_rec = core_recs[0]
+        filtered = dict(recommended_hypotheses)
+        filtered['core_recommendations'] = [top_rec]
+        filtered['core_count'] = 1
+        filtered['alternative_recommendations'] = []
+        return filtered
     
     def _format_hypotheses_for_prompt(self, recommended_hypotheses: Dict = None) -> str:
         """
@@ -223,10 +240,6 @@ class StrategistAgent(BaseAgent):
         lines.append("**⚠️ 重要提示：**")
         lines.append("1. 根据假设中的变量定义，从【当前数据可用列名】中选择最合适的列")
         lines.append("2. 设计任务来计算这些变量并验证假设")
-        lines.append("3. 例如：")
-        lines.append("   - V16_tech_impact（被引用次数）→ 选择 '被引用专利数量' 列")
-        lines.append("   - V09_tech_diversity（IPC多样性）→ 选择 'IPC分类号' 列，计算Shannon熵")
-        lines.append("   - V04_international_collab（外国发明人占比）→ 选择 '发明人' 列，需要解析国籍")
         lines.append("")
         
         return "\n".join(lines)
@@ -252,6 +265,21 @@ class StrategistAgent(BaseAgent):
         user_goal = input_data.get('user_goal', '')
         available_columns = input_data.get('available_columns', None)
         use_dag = input_data.get('use_dag', False)  # 默认 False，保持向后兼容
+
+        # 允许外部覆盖数据源（用于测试/不同数据集）
+        data_file = input_data.get('data_file')
+        sheet_name = input_data.get('sheet_name')
+        if data_file:
+            self.data_file = data_file
+        if sheet_name:
+            self.sheet_name = sheet_name
+
+        # 生成数据预览（统计 + 关键列样例）供 LLM 参考
+        data_preview_text: Optional[str] = None
+        try:
+            data_preview_text = DataPreview.from_file(self.data_file, self.sheet_name).to_prompt_string()
+        except Exception as e:
+            self.log(f"⚠️ DataPreview 生成失败: {e}", "warning")
         
         # 如果没有提供列名，尝试从数据文件读取
         if available_columns is None:
@@ -279,6 +307,10 @@ class StrategistAgent(BaseAgent):
                 recommended_hypotheses = hypothesis_result.get('step6_recommendation', {})
                 self.log(f"生成 {recommended_hypotheses.get('total_count', 0)} 个假设，"
                         f"核心推荐 {recommended_hypotheses.get('core_count', 0)} 个")
+                recommended_hypotheses = self._select_top_core_hypothesis(recommended_hypotheses)
+                if recommended_hypotheses and recommended_hypotheses.get('core_recommendations'):
+                    top_statement = recommended_hypotheses['core_recommendations'][0]['hypothesis'].get('statement', '')
+                    self.log(f"仅保留评分最高的核心假设用于验证: {top_statement}")
         
         # 步骤 2: 方法图谱检索（如果有方法图谱）
         method_context = ""
@@ -295,7 +327,8 @@ class StrategistAgent(BaseAgent):
                 user_goal, 
                 method_context, 
                 available_columns,
-                recommended_hypotheses=recommended_hypotheses
+                recommended_hypotheses=recommended_hypotheses,
+                data_preview_text=data_preview_text
             )
         else:
             # Legacy 模式（保持向后兼容）
@@ -305,7 +338,8 @@ class StrategistAgent(BaseAgent):
         
         result = {
             'blueprint': blueprint,
-            'method_context': method_context  # 改为 method_context
+            'method_context': method_context,  # 改为 method_context
+            'data_preview': data_preview_text
         }
         
         # 如果生成了假设，添加到返回结果中
@@ -319,7 +353,8 @@ class StrategistAgent(BaseAgent):
         user_goal: str, 
         graph_context: str, 
         available_columns: List[str] = None,
-        recommended_hypotheses: Dict = None
+        recommended_hypotheses: Dict = None,
+        data_preview_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         V5.0 DAG 模式：生成基于 DAG 的蓝图（集成假设）
@@ -337,6 +372,7 @@ class StrategistAgent(BaseAgent):
                 graph_context, 
                 available_columns=available_columns,
                 recommended_hypotheses=recommended_hypotheses,
+                data_preview_text=data_preview_text,
                 retry=attempt > 0
             )
             
@@ -487,38 +523,28 @@ class StrategistAgent(BaseAgent):
             '申请日': '申请日期（时间维度，可用于时间序列分析）',
             '名称': '专利标题（文本维度，可用于文本分析）',
             '摘要': '专利摘要（文本维度，可用于文本分析、主题建模）',
-            '申请(专利权)人': '申请人/权利人（实体维度，可用于实体分析、网络分析）→ 可计算企业规模(V02_firm_size)、研发投资(V03_rd_investment)',
-            'IPC分类号': '国际专利分类号（技术维度，可用于技术分类、聚类）→ 可计算技术多样性(V09_tech_diversity)、技术广度(V14_tech_breadth)',
-            'CPC分类号': '合作专利分类号（技术维度，可用于技术分类）→ 可计算技术多样性(V09_tech_diversity)',
+            '申请(专利权)人': '申请人/权利人（实体维度，可用于申请人分布、协作网络分析）',
+            'IPC分类号': '国际专利分类号（技术维度，可用于技术分类、聚类、跨领域分析）',
+            'CPC分类号': '合作专利分类号（技术维度，可用于技术分类）',
             '主分类号': '主分类号（技术维度）',
-            '发明人': '发明人（实体维度，可用于合作网络分析）→ 可计算国际合作(V04_international_collab)、研发效率(V13_rd_efficiency)',
+            '发明人': '发明人（实体维度，可用于合作网络分析、团队规模统计）',
             '地址': '地址（地理维度，可用于地理分布分析）',
             '代理机构': '代理机构（实体维度）',
             '代理人': '代理人（实体维度）',
             '法律状态': '法律状态（分类维度）',
-            '引用文献': '引用文献（关系维度，可用于引用网络分析）→ 可计算科学关联度(V10_science_linkage)',
-            '被引用专利': '被引用专利（前向引文，关系维度）→ 可计算技术影响力(V16_tech_impact)',
-            '被引用专利数量': '被引用次数（数值维度）→ 技术影响力(V16_tech_impact)的直接度量',
-            '引用专利': '引用专利（后向引文，关系维度）→ 可计算科学关联度(V10_science_linkage)',
-            '引用专利数量': '引用次数（数值维度）→ 可用于计算知识基础广度',
-            '简单同族': '专利家族（关系维度）→ 可计算国际化程度',
-            '优先权国家/地区': '优先权国家（地理维度）→ 可计算国际合作(V04_international_collab)',
+            '引用文献': '引用文献（关系维度，可用于引用网络分析）',
+            '被引用专利': '被引用专利（前向引文，关系维度）',
+            '被引用专利数量': '被引用次数（数值维度）',
+            '引用专利': '引用专利（后向引文，关系维度）',
+            '引用专利数量': '引用次数（数值维度）',
+            '简单同族': '专利家族（关系维度，可用于国际化/扩展度分析）',
+            '优先权国家/地区': '优先权国家（地理维度，可用于地理分布分析）',
         }
         
         descriptions = []
-        descriptions.append("【实际列名】→【语义说明】→【可计算的理论变量】")
+        descriptions.append("【实际列名】→【语义说明】")
         descriptions.append("")
-        descriptions.append("⚠️ 理论变量说明：")
-        descriptions.append("  - V02_firm_size: 企业规模（专利数量）")
-        descriptions.append("  - V03_rd_investment: 研发投资强度（人均专利产出）")
-        descriptions.append("  - V04_international_collab: 国际合作强度（外国发明人占比）")
-        descriptions.append("  - V09_tech_diversity: 技术多样性（IPC分类的Shannon熵）")
-        descriptions.append("  - V10_science_linkage: 科学关联度（引用科学文献的比例）")
-        descriptions.append("  - V13_rd_efficiency: 研发效率（人均专利产出）")
-        descriptions.append("  - V14_tech_breadth: 技术广度（IPC分类数量）")
-        descriptions.append("  - V16_tech_impact: 技术影响力（被引用次数）")
-        descriptions.append("")
-        descriptions.append("【列名与理论变量的对应关系】")
+        descriptions.append("【列名语义说明】")
         descriptions.append("")
         
         for col in columns:
@@ -537,7 +563,8 @@ class StrategistAgent(BaseAgent):
         graph_context: str, 
         retry: bool = False, 
         available_columns: List[str] = None,
-        recommended_hypotheses: Dict = None
+        recommended_hypotheses: Dict = None,
+        data_preview_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         生成基于 DAG 的研究战略蓝图（集成假设）
@@ -555,6 +582,7 @@ class StrategistAgent(BaseAgent):
             retry: 是否为重试生成
             available_columns: 真实数据的列名列表
             recommended_hypotheses: 因果图谱推荐的假设（可选）
+            data_preview_text: 数据预览文本（可选）
         """
         # 格式化列名语义描述
         columns_semantic = self._describe_columns_semantics(available_columns)
@@ -572,18 +600,14 @@ class StrategistAgent(BaseAgent):
 **当前数据可用列名及语义:**
 {columns_semantic}
 
+**数据预览（结构统计 + 关键列样例）:**
+{data_preview_text or "（未提供数据预览）"}
+
 **⚠️⚠️⚠️ 关键约束（必须遵守）⚠️⚠️⚠️**
 1. **列名必须完全匹配**：只能使用上面【实际列名】中列出的列名，一个字都不能改
 2. **禁止自创列名**：不要使用任何未在上面列出的列名（如 ID, Title, Abstract, Applicant, Grant Date 等）
 3. **直接复制列名**：从【实际列名】中直接复制粘贴，确保完全一致（包括括号、空格等）
-4. **数据源路径固定**：主数据路径必须使用 `data/clean_patents1_with_topics_filled.xlsx`，sheet名为 `clear`
-5. **变量计算要简单可行**：
-   - 技术成熟度(V22)：使用"专利年龄"（当前年份 - 授权年份）作为代理变量
-   - 技术多样性(V09)：如果只有"IPC主分类号"（单个值），改用"是否跨IPC大类"或其他可行指标
-   - 避免需要复杂分组聚合的计算
-6. **结论导向输出**：每个任务必须输出结论性数据（汇总、统计、发现），而不是中间特征或原始数据
-7. **假设验证优先**：如果提供了研究假设，优先设计任务来验证这些假设
-8. **添加控制变量**：回归分析和假设检验应包含基本控制变量（如专利年龄、申请人类型等）
+4. **数据源路径固定**：主数据路径必须使用 `data/new_data.XLSX`，sheet名为 `sheet1`
 
 **错误示例（禁止）:**
 - ❌ "ID" （应该使用 "序号"）
@@ -608,8 +632,25 @@ class StrategistAgent(BaseAgent):
 在生成方案前，请先进行以下思考（填入 `thinking_trace` 字段）：
 - **数据审计**: 列出可用的列名（从上面【实际列名】中复制），说明每个列的用途
 - **假设分析**: 如果提供了研究假设，分析需要计算哪些变量，需要哪些列
+- **创新性评估**: ⚠️ **关键步骤** - 评估当前方案的结论是否有洞察力：
+  * 这个结论是否是"常识"（如"老专利被引用多"、"大公司专利多"）？
+  * 如果是常识性结论，必须调整方案，挖掘更有价值的维度
+  * 好的结论应该是：反直觉的、有比较的、能指导决策的
 - **算法选择**: 根据用户目标和假设，选择最合适的算法
 - **结论设计**: 每个任务应该回答什么问题？输出什么结论？
+
+**⚠️ 避免常识性结论陷阱**：
+以下是**没有洞察价值**的常识性结论，必须避免：
+- ❌ "专利年龄越大，被引用次数越多" — 这是时间累积效应，谁都知道
+- ❌ "大公司的专利数量多" — 这是资源差异，没有洞察
+- ❌ "热门领域的专利增长快" — 这是定义循环
+- ❌ "引用多的专利被引用也多" — 这是网络效应常识
+
+以下是**有洞察价值**的结论类型，应该追求：
+- ✅ "团队规模存在最优点：3-5人团队的专利影响力最高，超过大团队" — 倒U型关系
+- ✅ "G06F领域的投入产出比是H04L的2倍" — 跨领域比较
+- ✅ "中国专利的年化引用率正在超越美国" — 趋势反转
+- ✅ "高引用专利的发明人往往不是高产发明人" — 反直觉发现
 
 ### 2. DAG 结构（Task Graph）
 将研究目标分解为 2-4 个任务节点，每个节点必须：
@@ -645,94 +686,13 @@ class StrategistAgent(BaseAgent):
    - 保存用于追溯，但不是主要输出
    - 示例：`df_raw.csv` (1000 rows)
 
-### 4. 假设验证任务示例
+### 4. 假设验证与中介分析通用原则（不预设指标）
 
-**如果提供了假设 "V09_tech_diversity → V16_tech_impact":**
-```
-Task 1: 变量计算
-  - 计算 V09_tech_diversity（简化方法：从 'IPC主分类号' 提取大类字母，如 'G06F' → 'G'）
-  - 计算 V16_tech_impact（从 '被引用专利数量' 直接获取）
-  - 计算控制变量：patent_age（2026 - 授权年份）
-  - 输出：variables_calculated.csv
-
-Task 2: 假设检验
-  - 使用回归分析验证 V09 → V16 的关系
-  - 包含控制变量（patent_age）
-  - 注意：控制变量不能与自变量重复
-  - 输出：hypothesis_test_result.json（包含系数、p值、结论）
-```
-
-**⚠️ 变量计算示例（避免常见错误）：**
-
-✅ **正确示例**：
-- V22_tech_maturity: "2026 - pd.to_datetime('授权日').dt.year"
-- V09_tech_diversity（类别变量）: "'IPC主分类号'.str[0]  # 保持为字符串，需要虚拟变量编码"
-- V13_rd_efficiency: "1.0 / len('发明人'.split(';'))  # 每个发明人的贡献"
-
-❌ **错误示例**：
-- 错误1：年份错误 - "2024 - pd.to_datetime('授权日').dt.year"  // 应该是2026
-- 错误2：V13公式倒置 - "1 / 发明人.split(';').len()"  // 这是倒数，应该是发明人数的倒数
-- 错误3：控制变量与自变量重复 - independent_var和control_vars不能包含相同变量
-- 错误4：类别变量用ASCII编码 - "'IPC主分类号'.str[0].apply(lambda x: ord(x))"  // 不要用ord()，会暗示大小关系
-
-**⚠️ 变量计算的简化原则：**
-- V22_tech_maturity（技术成熟度）→ 使用"专利年龄"（2026 - 授权年份）
-- V09_tech_diversity（技术多样性）→ 
-  * 如果只有单个IPC分类号，使用"IPC大类"（前1位字母）作为**类别变量**
-  * ⚠️ 重要：IPC大类是类别变量，不要用ASCII编码（ord()）转换为数值
-  * 正确做法：保持为字符串（'A', 'B', 'C'...），在回归时使用虚拟变量编码
-  * 或者明确说明需要"pd.Categorical()"或"LabelEncoder()"处理
-  * 注意：Shannon熵需要在整个数据集层面计算，不是单个专利的属性
-- V16_tech_impact（技术影响力）→ 直接使用"被引用专利数量"
-- V13_rd_efficiency（研发效率）→ 
-  * 单个专利层面：1.0 / 发明人数量（每个发明人的贡献）
-  * 申请人层面：专利总数 / 发明人总数（需要分组聚合）
-- V04_international_collab（国际合作）→ 从"发明人"或"优先权国家/地区"判断是否有外国参与
-- 避免需要复杂时间窗口或分组聚合的计算
-
-**⚠️ 类别变量的处理原则：**
-- IPC大类、申请人类型、技术领域等都是**类别变量**（Categorical）
-- 不要用ord()、ASCII编码等方式转换为数值（会暗示错误的大小关系）
-- 正确处理方式：
-  * 方式1：保持为字符串，说明需要虚拟变量编码（推荐）
-  * 方式2：使用pd.Categorical()
-  * 方式3：明确说明需要LabelEncoder()，但要注意这仍然暗示顺序关系
-
-**⚠️ 控制变量选择原则：**
-- 控制变量不能与自变量重复
-- 控制变量的计算公式不能与自变量或中介变量相同
-- **控制变量不能与自变量高度相关（避免多重共线性）**
-  * 例如：如果自变量是"专利年龄"（2026 - 授权年份），控制变量不能是"授权年份"
-  * 原因：两者线性相关（r ≈ -1.0），会导致回归系数不稳定
-  * 检查方法：如果两个变量来自同一列，且公式相关，则不能同时使用
-- 常用控制变量：申请人规模、技术领域（IPC大类）、专利类型
-- 中介分析中：控制与中介变量和因变量相关的其他因素
-
-**⚠️⚠️⚠️ 中介分析的硬性约束（必须遵守）⚠️⚠️⚠️**
-1. **三个变量必须不同**：independent_var、mediator_var、dependent_var 必须是三个不同的变量ID
-2. **禁止自己中介自己**：不能出现 X→X→Y 或 X→Y→Y 的情况
-3. **控制变量不能是中介变量**：在中介分析中，control_vars不能包含mediator_var
-   - 原因：控制中介变量会消除中介效应，导致分析失效
-   - 例如：如果mediator_var是"V09"，control_vars不能包含"V09"
-4. **控制变量不能与自变量高度相关**：避免多重共线性
-   - 例如：如果independent_var是"V22"（专利年龄），control_vars不能是"授权年份"
-5. **数据可得性检查**：如果某个变量无法从可用列计算，不要强行设计中介分析
-6. **缺少变量时的处理**：
-   - 如果缺少自变量X：跳过该假设，不设计任务
-   - 如果缺少中介变量M：改为直接效应检验（X→Y）
-   - 如果缺少因变量Y：跳过该假设
-7. **只验证核心推荐的第一个假设**：如果有多个假设，优先验证排名第一的核心推荐假设
-
-**错误示例（绝对禁止）：**
-- ❌ independent_var: "V13", mediator_var: "V13", dependent_var: "V16"  // 自己中介自己
-- ❌ mediator_var: "V09", control_vars: ["V09"]  // 控制变量包含中介变量
-- ❌ independent_var: "V22", control_vars: ["V22"]  // 控制变量与自变量相同
-- ❌ independent_var: "V22", control_vars: ["patent_age"]，且两者公式都是 "2026 - 授权年份"  // 计算公式相同
-
-**正确示例：**
-- ✓ independent_var: "V22", mediator_var: "V09", dependent_var: "V16", control_vars: []  // 简单中介，无控制变量
-- ✓ independent_var: "V22", mediator_var: "V09", dependent_var: "V16", control_vars: ["applicant_type"]  // 控制变量不在中介路径上
-- ✓ 如果缺少V01数据，直接检验 V13→V16，不要构造 V13→V13→V16
+- 若提供研究假设，**基于假设语义 + 可用列名**自主定义变量与计算方式。
+- **不要预设固定指标或变量编号**，变量命名以当前任务语义为准。
+- 中介分析时，independent_var/mediator_var/dependent_var 必须不同。
+- 控制变量不能与自变量或中介变量重复，且避免高度相关（共线性）变量。
+- 若关键变量无法由现有列计算，应跳过或改为更直接的检验方式。
 
 ---
 
@@ -740,72 +700,30 @@ Task 2: 假设检验
 
 {{
   "thinking_trace": {{
-    "data_audit": "可用列名：'序号'（ID）、'名称'（标题）、'摘要'（文本）、'授权日'（时间）、'IPC分类号'（技术分类）、'被引用专利数量'（影响力）",
-    "hypothesis_analysis": "假设H1需要计算V09（技术多样性，从IPC分类号）和V16（技术影响力，从被引用专利数量）",
-    "algorithm_selection": "使用Shannon熵计算技术多样性，使用线性回归验证假设",
-    "conclusion_design": "Task 1计算变量；Task 2验证假设，输出回归结果JSON"
+    "data_audit": "简要列出可用列名及用途（从【实际列名】复制）",
+    "hypothesis_analysis": "若有假设，说明如何把假设语义映射到可用列",
+    "algorithm_selection": "选择方法的理由",
+    "conclusion_design": "每个任务预期输出的结论"
   }},
   "research_objective": "研究目标的简洁描述",
   "expected_outcomes": ["预期成果1（结论性）", "预期成果2（结论性）"],
   "task_graph": [
     {{
       "task_id": "task_1",
-      "task_type": "variable_calculation",
-      "question": "如何计算研究假设中的变量？",
+      "task_type": "analysis",
+      "question": "本步骤要回答的问题",
       "input_variables": [],
-      "output_variables": ["variables_df"],
+      "output_variables": ["result_1"],
       "dependencies": [],
-      "description": "计算假设验证所需的变量",
+      "description": "步骤说明",
       "implementation_config": {{
-        "data_source": "data/clean_patents1_with_topics_filled.xlsx",
-        "sheet_name": "clear",
-        "columns_to_load": ["序号", "IPC分类号", "被引用专利数量"],
-        "variables_to_calculate": [
-          {{
-            "variable_id": "V09_tech_diversity",
-            "variable_name": "技术多样性",
-            "calculation_method": "Shannon熵",
-            "source_column": "IPC分类号",
-            "formula": "H = -Σ(pi * log(pi))"
-          }},
-          {{
-            "variable_id": "V16_tech_impact",
-            "variable_name": "技术影响力",
-            "calculation_method": "直接使用",
-            "source_column": "被引用专利数量"
-          }}
-        ],
-        "output_format": "csv",
-        "output_file": "outputs/task_1_variables.csv",
-        "output_columns": ["序号", "V09_tech_diversity", "V16_tech_impact"]
-      }}
-    }},
-    {{
-      "task_id": "task_2",
-      "task_type": "hypothesis_test",
-      "question": "假设H1（技术多样性→技术影响力）是否成立？",
-      "input_variables": ["variables_df"],
-      "output_variables": ["hypothesis_test_result"],
-      "dependencies": ["task_1"],
-      "description": "使用回归分析验证假设",
-      "implementation_config": {{
-        "algorithm": "Linear Regression",
-        "input_file": "outputs/task_1_variables.csv",
-        "independent_var": "V09_tech_diversity",
-        "dependent_var": "V16_tech_impact",
-        "control_vars": ["patent_age"],
+        "data_source": "data/new_data.XLSX",
+        "sheet_name": "sheet1",
+        "columns_to_load": ["<列名1>", "<列名2>"],
+        "parameters": {{}},
         "output_format": "json",
-        "output_file": "outputs/task_2_hypothesis_test.json",
+        "output_file": "outputs/task_1_result.json",
         "output_content": {{
-          "hypothesis_id": "H1",
-          "hypothesis_statement": "技术多样性对技术影响力有正向影响",
-          "test_method": "Linear Regression",
-          "results": {{
-            "coefficient": "回归系数",
-            "p_value": "显著性",
-            "r_squared": "拟合优度",
-            "conclusion": "假设是否成立"
-          }},
           "key_findings": "关键发现"
         }}
       }}
@@ -813,20 +731,92 @@ Task 2: 假设检验
   ]
 }}
 
+**⚠️ 回归分析的输出要求（所有类型）：**
+```json
+"output_content": {{
+  "hypothesis_id": "H1",
+  "hypothesis_statement": "假设陈述",
+  "test_method": "Linear Regression / Mediation Analysis",
+  "effect_size_criteria": {{
+    "small": "< 0.3",
+    "medium": "0.3 - 0.5",
+    "large": "> 0.5"
+  }},
+  "results": {{
+    "coefficient": "回归系数（float）",
+    "std_error": "标准误（float）",
+    "p_value": "显著性（float）",
+    "r_squared": "拟合优度（float）",
+    "effect_size": "small/medium/large（基于标准化系数）",
+    "standardized_coefficient": "标准化系数（用于判断效应量）",
+    "conclusion": "假设是否成立"
+  }},
+  "key_findings": "包含效应量的实质性解释，例如：'技术成熟度对影响力有中等正向效应（β=0.35）'"
+}}
+```
+
+**⚠️ 中介分析的输出要求（如果是中介假设）：**
+```json
+"output_content": {{
+  "hypothesis_id": "H1",
+  "hypothesis_statement": "M中介X对Y的影响",
+  "test_method": "Bootstrap Mediation Analysis (5000 samples)",
+  "effect_size_criteria": {{
+    "small": "< 0.3",
+    "medium": "0.3 - 0.5",
+    "large": "> 0.5"
+  }},
+  "path_coefficients": {{
+    "total_effect": {{
+      "coefficient": "float",
+      "p_value": "float",
+      "effect_size": "small/medium/large",
+      "interpretation": "X对Y的总效应"
+    }},
+    "a_path": {{
+      "coefficient": "float",
+      "p_value": "float",
+      "effect_size": "small/medium/large",
+      "interpretation": "X对M的影响"
+    }},
+    "b_path": {{
+      "coefficient": "float",
+      "p_value": "float",
+      "effect_size": "small/medium/large",
+      "interpretation": "M对Y的影响（控制X）"
+    }},
+    "direct_effect": {{
+      "coefficient": "float",
+      "p_value": "float",
+      "effect_size": "small/medium/large",
+      "interpretation": "X对Y的直接效应（控制M）"
+    }},
+    "indirect_effect": {{
+      "coefficient": "float",
+      "ci_95": "[lower, upper]",
+      "p_value": "float",
+      "effect_size": "small/medium/large",
+      "interpretation": "通过M的间接效应"
+    }}
+  }},
+  "mediation_ratio": "float (0-100，间接效应/总效应×100%)",
+  "mediation_type": "完全中介/部分中介/无中介",
+  "conclusion": "中介效应是否显著，方向（正/负）",
+  "key_findings": "包含效应量和中介比例的实质性解释，例如：'M贡献了60%的效应，是关键中介机制'"
+}}
+```
+
 **生成前检查清单:**
 - [ ] 所有列名都在【实际列名】中
-- [ ] 数据源路径为 data/clean_patents1_with_topics_filled.xlsx
-- [ ] 变量计算方法简单可行（避免复杂分组聚合）
-- [ ] 只验证核心推荐的第一个假设（不要验证所有假设）
+- [ ] 数据源路径为 data/new_data.XLSX（sheet1）
+- [ ] 变量命名与计算方式来源于任务语义与可用列（不预设固定指标）
 - [ ] 中介分析的三个变量（X、M、Y）必须不同
 - [ ] 控制变量不能是中介变量本身
 - [ ] 控制变量不与自变量的计算公式相同或高度相关
-- [ ] 类别变量（如IPC大类）不使用ord()或ASCII编码
-- [ ] 年份使用2026（当前年份）
-- [ ] V13研发效率公式正确（发明人数的倒数）
 - [ ] 每个任务都有明确的 question
 - [ ] 每个任务的输出都是结论性的（JSON 汇总 > CSV 表格）
-- [ ] output_content 描述了输出的结构和内容
+- [ ] output_content 包含 effect_size 字段（所有回归分析）
+- [ ] 中介分析包含 mediation_ratio 字段
 
 {"**⚠️ 重试提示**: 上次生成使用了错误的列名或输出了中间特征，请严格使用【实际列名】并输出结论性数据！" if retry else ""}
 
@@ -990,8 +980,8 @@ outputs/task_2_topics_summary.json
       "dependencies": [],
       "description": "生成数据集基本统计摘要",
       "implementation_config": {{
-        "data_source": "data/clean_patents1_with_topics_filled.xlsx",
-        "sheet_name": "clear",
+        "data_source": "data/new_data.XLSX",
+        "sheet_name": "sheet1",
         "columns_to_load": ["序号", "名称", "摘要", "申请(专利权)人", "授权日"],
         "output_format": "json",
         "output_file": "outputs/task_1_data_summary.json",
@@ -1160,7 +1150,9 @@ outputs/task_2_topics_summary.json
                     return False
         
         # 检查 3: 变量流一致性
-        available_vars = set()  # 当前可用的变量集合
+        # 初始化可用变量：包含测试数据（如果提供）
+        available_vars = {'df_raw'}
+        
         task_outputs = {}  # 记录每个任务的输出变量
         
         # 按依赖关系排序任务（拓扑排序）
@@ -1343,7 +1335,7 @@ outputs/task_2_topics_summary.json
   * 分类结果：保存类别标签（str, int）
   * 时间序列结果：保存数值统计（如变化点数量、趋势值），不要保存 Timestamp 对象或列表
 - **不要复制示例**：下面的示例仅供参考格式，列名必须使用实际提供的列名。
-- **文件路径固定**：主数据路径固定为 `data/clean_patents1_with_topics_filled.xlsx`，sheet 名为 `clear`。
+- **文件路径固定**：主数据路径固定为 `data/new_data.XLSX`，sheet 名为 `sheet1`。
 - **文件传递思维**：
   - 步骤 1 保存 `outputs/step_1_results.csv`（包含新生成的列）
   - 步骤 2 加载 `outputs/step_1_results.csv`，使用新生成的列
@@ -1369,7 +1361,7 @@ outputs/task_2_topics_summary.json
       "implementation_config": {{
         "algorithm": "具体算法名称",
         "input_data_source": {{
-          "main_data": "data/clean_patents1_with_topics_filled.xlsx",
+          "main_data": "data/new_data.XLSX",
           "main_data_columns": ["从可用列名中选择需要的列"],
           "dependencies": []
         }},
@@ -1393,7 +1385,7 @@ outputs/task_2_topics_summary.json
       "implementation_config": {{
         "algorithm": "具体算法名称",
         "input_data_source": {{
-          "main_data": "data/clean_patents1_with_topics_filled.xlsx",
+          "main_data": "data/new_data.XLSX",
           "main_data_columns": [],
           "dependencies": [
             {{

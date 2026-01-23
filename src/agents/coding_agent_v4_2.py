@@ -78,6 +78,11 @@ class CodingAgentV4_2(BaseAgent):
         # 重置错误历史和 REPL 环境
         self.error_history = []
         self.repl.reset()  # 每次任务开始时重置环境
+
+        # 注入预加载数据到 REPL，避免 LLM 自行读取 Excel 并选错 sheet
+        if test_data is not None:
+            self.repl.globals["df"] = test_data
+            self.repl.globals["test_data"] = test_data
         
         # 构建上下文信息
         context_info = self._build_context_info(previous_result, previous_error)
@@ -109,6 +114,50 @@ class CodingAgentV4_2(BaseAgent):
         
         # 提取最终结果
         final_result = self._extract_final_result(result)
+
+        # 如果没有任何工具调用，强制追加指令重试一次
+        if final_result.get("iteration_count", 0) == 0:
+            assistant_preview = (final_result.get("last_assistant_content") or "").strip()
+            if assistant_preview:
+                self.log(
+                    "⚠️ LLM 未调用工具时的最后回复(前500字符):\n"
+                    f"{assistant_preview[:500]}"
+                )
+            else:
+                self.log("⚠️ LLM 未调用工具且未捕获assistant回复内容")
+            self.log("⚠️ 未检测到 run_python 调用，追加强制工具提示重试一次")
+            retry_message = (
+                initial_message
+                + "\n\n⚠️ 你必须至少调用一次 run_python 工具执行代码，不能只输出文本或代码块。请重新执行。"
+            )
+            self.error_history = []
+            self.repl.reset()
+            if test_data is not None:
+                self.repl.globals["df"] = test_data
+                self.repl.globals["test_data"] = test_data
+            result = self.agent.invoke({
+                "messages": [("user", retry_message)],
+                "configurable": {
+                    "execution_spec": execution_spec,
+                    "test_data": test_data,
+                    "max_iterations": self.max_iterations,
+                    "actual_columns": actual_columns,
+                },
+            }, config={"recursion_limit": recursion_limit})
+            final_result = self._extract_final_result(result)
+            if final_result.get("iteration_count", 0) == 0:
+                assistant_preview = (final_result.get("last_assistant_content") or "").strip()
+                if assistant_preview:
+                    self.log(
+                        "⚠️ 重试后仍未调用工具，最后回复(前500字符):\n"
+                        f"{assistant_preview[:500]}"
+                    )
+                else:
+                    self.log("⚠️ 重试后仍未调用工具且未捕获assistant回复内容")
+                final_result["runtime_error"] = (
+                    final_result.get("runtime_error")
+                    or "❌ 未调用 run_python 工具，无法执行代码。"
+                )
         
         self.log(f"✅ [完成] 代码生成完成")
         
@@ -139,6 +188,19 @@ class CodingAgentV4_2(BaseAgent):
             code_preview = code[:300] + "\n..." if len(code) > 300 else code
             self.log(f"代码:\n{code_preview}")
             self.log("-" * 60)
+
+            forbidden_df_patterns = [
+                r"\bdf\s*=\s*pd\.read_excel\s*\(",
+                r"\bdf\s*=\s*pd\.ExcelFile\s*\(",
+                r"\bdf\s*=\s*pd\.read_csv\s*\(",
+                r"\bdf\s*=\s*pd\.DataFrame\s*\(",
+            ]
+            if any(re.search(pattern, code) for pattern in forbidden_df_patterns):
+                self.log("  ⚠️ 检测到禁止的 df 重建/读取操作")
+                return (
+                    "❌ 禁止重新构造或读取 df。df 已预加载，请直接使用 df（需要副本可用 df.copy()）。"
+                    "\n\n🛑 请改为使用已注入的 df 变量，不要使用 pd.read_excel/pd.read_csv/pd.DataFrame 创建 df。"
+                )
             
             try:
                 output = self.repl.run(code)
@@ -460,8 +522,8 @@ results_df.to_csv('指定路径', index=False)
                     input_data_info += """
 **⚠️ 正确的加载方式：**
 ```python
-# 1. 加载主数据（包含所有原始列）
-df = pd.read_excel('主数据文件路径', sheet_name='clear')
+# 1. 主数据已预加载（包含所有原始列）
+df = df.copy()
 
 # 2. 加载依赖文件（只包含 ID + 新列）
 dep_df = pd.read_csv('依赖文件路径')
@@ -479,269 +541,156 @@ df = pd.merge(df, dep_df, on=['序号', '公开(公告)号'], how='left')
         import getpass
         import platform
         
+        is_windows = platform.system() == 'Windows'
+        
         system_info = f"""
 **执行环境：**
 - 操作系统: {platform.system()} {platform.release()}
 - Python版本: {platform.python_version()}
 - 工作目录: {Path.cwd()}
 """
+        if is_windows:
+            system_info += """
+⚠️ **Windows 系统命令提示：**
+- 列出文件用 `dir`（不要用 ls）
+- 查看文件用 `type`（不要用 cat）
+- 创建目录用 `mkdir`（不要用 mkdir -p）
+- 查看文件前N行用 `powershell -Command "Get-Content -TotalCount N file"`（不要用 head）
+"""
         
-        prompt = f"""你是世界级的 Python 数据分析专家，能够通过执行代码完成任何数据分析任务。
-
-**你的能力：**
-- ✅ 你有完整的权限执行任何必要的代码
-- ✅ 你可以安装新的Python包
-- ✅ 你可以访问文件系统和执行Shell命令
-- ✅ 你能够完成任何数据分析任务
-
-**核心原则（来自世界顶级编程实践）：**
-1. **小步快跑**：永远不要试图在一个代码块中完成所有事情
-2. **打印验证**：每一步都要打印信息，确认结果
-3. **持续迭代**：第一次很少成功，从小步骤中学习并继续
-4. **失败重试**：如果失败了，分析错误，调整策略，再试一次
+        # 获取任务类型
+        task_type = execution_spec.get('task_id', '').split('_')[0] if execution_spec.get('task_id') else 'task'
+        is_hypothesis_test = 'hypothesis' in str(execution_spec).lower() or 'mediation' in str(execution_spec).lower()
+        
+        prompt = f"""你是世界级的 Python 数据分析专家。你的特点是：**先思考，后执行，一次成功**。
 
 {system_info}
 
-🚨 **最重要的要求（必须严格遵守）：**
-
-1. **保存结果时只包含必要的列**
-   - 必须包含：ID 列（`序号`, `公开(公告)号`）+ 新生成的列
-   - 禁止包含：原始数据列（标题、摘要等）、前置步骤的列
-   
-2. **多值数据必须展开成多列**
-   - 如果生成了列表数据（如关键词列表），必须展开成独立的列
-   - 禁止保存为单列的列表字符串
-
-📋 **执行规格：**
+📋 **任务规格：**
 {json.dumps(execution_spec, indent=2, ensure_ascii=False)}
 
 {context_info}
 {input_data_info}
 {output_files_info}
 
-🛠️ **你的工具箱：**
-1. `run_python(code)` - 执行 Python 代码（有状态，变量会保持）
-   - 查看数据：run_python("print(df.head())")
-   - 查看列名：run_python("print(df.columns)")
-   - 查看数据类型：run_python("print(df.dtypes)")
-2. `execute_shell(command)` - 执行终端命令（ls, mkdir, pip install 等）
-3. `read_file(filepath)` - 读取文件内容
-4. `write_file(filepath, content)` - 写入文件
-5. `check_file_exists(filepath)` - 检查文件是否存在
+📦 **已预加载的数据（⚠️ 必须使用，禁止自己读取 Excel）：**
+- 变量 `df` 已包含正确数据，形状: {test_data.shape if test_data is not None else 'N/A'}
+- 列名: {actual_columns}
+- ⛔ **禁止** 使用 `pd.read_excel()` 或 `pd.ExcelFile()` 读取数据！
+- ⛔ **禁止** 自己选择 sheet_name！数据已经是正确的 sheet！
+- ✅ **直接使用** 预加载的 `df` 变量即可！
 
-🎯 **你的任务流程：**
-
-**第1步：环境准备**
-- 使用 `execute_shell` 检查输出目录是否存在
-- 如果不存在，使用 `execute_shell('mkdir outputs')` 创建
-- 使用 `check_file_exists` 检查依赖文件是否存在
-
-**第2步：数据探索**
-- 使用 `run_python("print(df.head())")` 查看数据
-- 使用 `run_python("print(df.columns)")` 查看列名
-- 了解实际列名：{actual_columns}
-
-**第3步：编写和测试代码**
-- 使用 `run_python` 逐步编写代码
-- 先加载数据，打印确认
-- 再执行分析，打印中间结果
-- 最后保存结果到指定路径
-
-**第4步：验证结果**
-- 使用 `check_file_exists` 确认文件已保存
-- 使用 `read_file` 查看前几行，确认格式正确
-- **验证列数**：确保只有 ID 列 + 新生成的列
-
-⚠️ **关键要求（基于Open Interpreter最佳实践）：**
-
-1. **小步执行，持续验证**
-   - 🚫 不要试图一次性完成所有代码
-   - ✅ 写一小段，执行，打印结果，观察，再继续
-   - ✅ 每个代码块应该只做一件事
-   - 💡 你永远不会第一次就成功，这是正常的！
-
-2. **必须打印中间结果**
-   - 每次 `run_python` 都要用 print() 查看结果
-   - 打印数据形状、列名、前几行、统计信息
-   - 这样你才能知道下一步该做什么
-
-3. **使用实际列名**：{actual_columns}
-
-4. **保存到指定路径**：严格使用上面指定的文件路径
-
-5. **🔥 只保存必要的列**
-   - 必须包含：ID 列（`序号`, `公开(公告)号`）+ 新生成的列
-   - 禁止包含：原始数据列、前置步骤的列
-
-6. **处理依赖**：如果需要前一步的结果，先检查文件是否存在，再加载
-
-7. **遇到错误时**
-   - 仔细阅读错误信息
-   - 打印相关变量的值和类型
-   - 调整代码，再试一次
-   - 如果同样的方法失败多次，换一个完全不同的方法
-
-📝 **代码执行模式（小步快跑）：**
-
-```python
-# ❌ 错误示例：试图一次完成所有事情
-# 这样做你看不到中间结果，出错了也不知道哪里错了
-df = pd.read_excel('data.xlsx')
-df['new_col'] = some_complex_operation(df)
-results = analyze(df)
-results.to_csv('output.csv')
-```
-
-```python
-# ✅ 正确示例：小步执行，每步验证
-
-# 步骤1：加载数据
-import pandas as pd
-df = pd.read_excel('data.xlsx')
-print(f"✅ 数据加载成功: {df.shape}")
-print(f"列名: {list(df.columns)}")
-```
-
-```python
-# 步骤2：查看数据
-print("前5行数据:")
-print(df.head())
-print("\n数据类型:")
-print(df.dtypes)
-```
-
-```python
-# 步骤3：执行一小部分分析
-# 先在一个样本上测试
-sample = df.head(10)
-result = some_operation(sample)
-print(f"样本结果: {result}")
-# 看起来正确，再应用到全部数据
-```
-
-```python
-# 步骤4：应用到全部数据
-df['new_col'] = some_operation(df)
-print(f"✅ 新列生成完成")
-print(f"新列的统计: {df['new_col'].describe()}")
-```
-
-```python
-# 步骤5：保存结果（只保存必要的列）
-results_df = df[['序号', '公开(公告)号', 'new_col']]
-results_df.to_csv('output.csv', index=False)
-print(f"✅ 结果已保存: {results_df.shape}")
-```
-
-**为什么要这样做？**
-- 你能看到每一步的结果
-- 出错时能立即发现问题在哪
-- 可以根据中间结果调整策略
-- 更容易调试和修复
-
-**记住：你是在探索和学习，不是在执行预定的脚本！**
-
-```python
-# 步骤2：加载依赖数据（如果需要）
-prev_results = pd.read_csv('outputs/step_1_topic_results.csv')
-print(f"前置结果加载成功: {{prev_results.shape}}")
-print(f"列名: {{list(prev_results.columns)}}")
-
-# 合并数据（通过 ID 列）
-# ⚠️ 前置结果只包含 ID + 新列，需要与主数据合并才能访问原始列
-df = pd.merge(df, prev_results, on=['序号', '公开(公告)号'], how='left')
-print(f"合并后: {{df.shape}}")
-print(f"现在可以同时访问原始数据和前置步骤的结果")
-```
-
-```python
-# 步骤3：执行分析
-# ... 你的分析代码 ...
-print("分析完成")
-```
-
-```python
-# 步骤4：保存结果
-import joblib
-
-# ⚠️ 重要：只保存 ID 列和新生成的列！
-# 
-# ❌ 错误示例：
-# df.to_csv('path.csv')  # 保存了所有列，包括原始数据
-# results_df = pd.DataFrame({{'keywords': keywords_list}})  # 单列包含列表
-#
-# ✅ 正确示例：
-# results_df = df[['序号', '公开(公告)号', 'new_col1', 'new_col2']]  # 只选择必要的列
-# 
-# 如果有多列需要展开（如 keyword_0, keyword_1...）：
-# results_dict = {{'序号': df['序号'], '公开(公告)号': df['公开(公告)号']}}
-# for i in range(5):
-#     results_dict[f'keyword_{{i}}'] = [doc[i] if len(doc) > i else '' for doc in keywords_list]
-# results_df = pd.DataFrame(results_dict)
-
-# 示例：只保存 ID 和新列
-results_df = df[['序号', '公开(公告)号', 'new_column1', 'new_column2']]
-results_df.to_csv('指定的路径', index=False)
-print(f"结果已保存: {{results_df.shape}}")
-
-# 如果有模型
-if 'model' in locals():
-    joblib.dump(model, '指定的路径')
-    print("模型已保存")
-```
-
-```python
-# 步骤5：验证保存的文件
-import os
-if os.path.exists('指定的路径'):
-    print(f"文件存在")
-    # 读取并验证列数
-    verify_df = pd.read_csv('指定的路径')
-    print(f"保存的列: {{list(verify_df.columns)}}")
-    print(f"列数: {{len(verify_df.columns)}}")
-    print(f"前几行:")
-    print(verify_df.head())
-else:
-    print(f"文件不存在")
-```
-
-**🎯 完成标准：**
-当你完成以下所有步骤后，任务就完成了：
-1. ✅ 数据已加载
-2. ✅ 分析已完成
-3. ✅ 结果已保存到指定路径
-4. ✅ 文件已验证（列数和内容正确）
-
-**🛑 停止条件（何时任务完成）：**
-
-当你完成以下所有步骤后，**立即返回最终答案并停止**：
-1. ✅ 数据已加载并验证
-2. ✅ 分析已完成并打印了结果
-3. ✅ 结果已保存到指定路径
-4. ✅ 文件已验证（使用read_file查看前几行，确认列数和内容正确）
-
-**最终答案格式：**
-```
-✅ 任务完成！
-
-结果文件：outputs/step_X_results.csv
-数据形状：(行数, 列数)
-保存的列：['序号', '公开(公告)号', '新列1', '新列2']
-
-验证通过：
-- 文件存在 ✓
-- 列数正确 ✓
-- 数据格式正确 ✓
-```
-
-**⚠️ 完成验证后，不要执行任何额外的测试、分析或探索代码！**
+🛠️ **工具：**
+- `run_python(code)` - 执行Python代码
+- `execute_shell(command)` - 执行Shell命令
+- `check_file_exists(filepath)` - 检查文件
+- ⚠️ 必须至少调用一次 `run_python` 工具执行代码，不能只输出代码文本
 
 ---
 
-开始执行吧！记住：
-- 🐢 小步快跑，每步都要print确认
-- 🔄 第一次失败是正常的，继续尝试
-- 🎯 完成验证后立即停止并返回最终答案
+## 🎯 执行策略：先规划，后执行，3步完成
+
+### 第1步：编写完整的分析函数（1次调用）
+
+根据执行规格，直接编写一个**完整的函数**来完成任务：
+
+```python
+import pandas as pd
+import numpy as np
+import json
+
+def execute_analysis(df):
+    \"\"\"完整的分析函数\"\"\"
+    
+    # 1. 数据准备
+    # ...
+    
+    # 2. 核心分析逻辑
+    # ...
+    
+    # 3. 生成结果
+    result = {{
+        'conclusion': '...',
+        'statistics': {{...}},
+        'is_significant': True/False
+    }}
+    
+    return result
+
+# 执行分析
+result = execute_analysis(df)
+print("分析结果:")
+print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+
+# 保存结果
+with open('outputs/task_X_result.json', 'w', encoding='utf-8') as f:
+    json.dump(result, f, ensure_ascii=False, indent=2, default=str)
+print("✅ 结果已保存")
+```
+
+### 第2步：处理错误（如有）
+
+如果第1步出错：
+- 阅读错误信息
+- **修改原有代码并整体重写**（重新提交一份完整脚本），而非添加“补丁式”新代码块
+- 如果方法本身不可行，**立即简化方法**
+
+### 第3步：验证并输出结论
+
+```python
+# 验证文件
+import os
+if os.path.exists('outputs/task_X_result.json'):
+    with open('outputs/task_X_result.json', 'r') as f:
+        saved = json.load(f)
+    print("✅ 验证通过")
+    print(f"结论: {{saved.get('conclusion', 'N/A')}}")
+```
+
+---
+
+## ⚠️ 核心原则
+
+1. **一次写完整函数**，不要碎片化
+2. **目标：3次迭代内完成**
+3. **遇到复杂问题立即简化**：
+   - 分类变量太多(>20) → 只用Top-10
+   - Bootstrap失败 → 用点估计
+   - 中介分析失败 → 用相关性分析
+4. **必须输出结论**，不能只跑代码
+5. **禁止追加式调试脚本**：不要在同一任务里不断追加新的 import / 新的函数定义 / “下一步”段落
+6. **每次迭代都要提交完整最终版本**：包含必要 import、单个主函数、执行入口、保存输出、最后的文件验证
+7. **避免巨量输出**：不要打印整个 DataFrame 或超长日志，只输出关键统计与最终结论
+
+---
+
+## 📤 输出要求
+
+{"**假设检验任务：必须输出JSON结论**" if is_hypothesis_test else "**变量计算任务：输出CSV数据**"}
+
+{'''
+假设检验结果必须包含：
+```json
+{
+  "hypothesis": "假设描述",
+  "conclusion": "支持/不支持/部分支持",
+  "statistics": {
+    "coefficient": 0.15,
+    "p_value": 0.001,
+    "r_squared": 0.10
+  },
+  "interpretation": "解释说明"
+}
+```
+''' if is_hypothesis_test else '''
+变量计算结果：
+- 保存CSV到指定路径
+- 只包含ID列 + 新生成的列
+'''}
+
+---
+
+**现在开始！记住：先写完整函数，目标3次迭代完成。**"""
         
         return prompt
     
@@ -752,9 +701,14 @@ else:
         generated_code = []
         last_tool_result = ""
         iteration_count = 0
-        
+        last_assistant_content = ""
+
         for msg in messages:
             content = msg.content if hasattr(msg, 'content') else str(msg)
+            msg_type = getattr(msg, 'type', '')
+            msg_class = msg.__class__.__name__
+            if msg_type in {"ai", "assistant"} or "AIMessage" in msg_class:
+                last_assistant_content = content
             
             # 提取代码块
             if hasattr(msg, 'tool_calls') and msg.tool_calls:
@@ -776,9 +730,23 @@ else:
         # 1. 有代码生成
         # 2. 最后的工具结果不包含错误标记
         # 3. 如果最后一个工具是read_file且成功，说明已经验证完成
-        has_error = "❌" in last_tool_result or "Error" in last_tool_result or "Traceback" in last_tool_result
-        has_verification = "✅ [OK] 读取成功" in last_tool_result or "文件存在" in last_tool_result
-        is_code_valid = generated_code and not has_error
+        last_tool_result_stripped = (last_tool_result or "").lstrip()
+        has_error = (
+            last_tool_result_stripped.startswith("❌")
+            or "Traceback" in last_tool_result
+            or "Exception" in last_tool_result
+        )
+        has_verification = any(
+            marker in last_tool_result
+            for marker in [
+                "✅ [OK] 读取成功",
+                "✅ 文件存在",
+                "文件大小:",
+                "✅ 结果文件已成功保存",
+                "✅ 结果已成功保存",
+            ]
+        )
+        is_code_valid = bool(generated_code) and not has_error
         
         # 如果已经验证了结果文件，认为任务完成
         if has_verification and not has_error:
@@ -789,7 +757,8 @@ else:
             'iteration_count': iteration_count,
             'is_code_valid': is_code_valid,
             'runtime_error': last_tool_result if has_error else '',
-            'error_history': self.error_history
+            'error_history': self.error_history,
+            'last_assistant_content': last_assistant_content
         }
     
     def _parse_error(self, error_msg: str) -> Tuple[str, str]:
@@ -806,3 +775,13 @@ else:
         """检查是否为重复错误"""
         count = sum(1 for err in self.error_history if err['type'] == error_type)
         return count >= threshold
+    
+    def _get_strategy_switch_advice(self, error_type: str) -> str:
+        """根据错误类型提供策略切换建议"""
+        advice_map = {
+            "ValueError": "分类变量太多→用Top-10；Bootstrap失败→用点估计；中介分析失败→用相关性",
+            "TypeError": "检查数据类型，日期转字符串，混合类型先清洗",
+            "KeyError": "打印实际列名，检查空格或特殊字符",
+            "ModuleNotFoundError": "用 execute_shell('pip install 包名') 安装",
+        }
+        return advice_map.get(error_type, "简化代码，使用基础方法")
