@@ -20,13 +20,15 @@
 │   │   ├── methodologist.py      # 技术架构智能体
 │   │   ├── coding_agent.py       # 代码实现智能体
 │   │   └── reviewer.py           # 报告生成智能体
+│   └── graphs/                    # 图谱模块
+│       ├── causal_graph_query.py  # 因果图谱查询器
+│       ├── method_graph_query.py  # 方法图谱查询器
+│       └── data/                  # 图谱数据
+│           ├── causal/            # 因果图谱数据
+│           └── method/            # 方法图谱数据
 │   └── utils/                     # 工具函数
-│       ├── causal_graph_query.py # 因果图谱查询器
 │       ├── variable_mapper.py    # 变量映射器
 │       └── neo4j_connector.py    # Neo4j连接器
-├── sandbox/
-│   └── static/data/
-│       └── causal_ontology_extracted.json  # 因果图谱数据
 ├── docs/                          # 文档
 │   ├── COMPLETE_SYSTEM_WORKFLOW.md        # 完整系统工作流程
 │   ├── GRAPH_ARCHITECTURE_DEFINITION.md   # 双图谱架构定义
@@ -140,10 +142,10 @@ Reviewer Agent（报告生成）
 - **实现类**: `src/utils/variable_mapper.py`
 
 #### 3. 方法图谱（Methodology Graph）
-- **存储位置**: Neo4j数据库
+- **存储位置**: `src/graphs/data/method/`
 - **数据规模**: 66篇论文，1023个节点，2749个关系
 - **核心功能**: 提供具体的分析方法和参数配置
-- **实现类**: `src/utils/neo4j_connector.py`
+- **实现类**: `src/graphs/method_graph_query.py`
 
 ## 📊 使用示例
 

@@ -24,8 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
 from src.utils.llm_client import get_llm_client
-from src.utils.causal_graph_query import CausalGraphQuery
-from src.utils.method_graph_query import MethodGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
+from src.graphs.method_graph_query import MethodGraphQuery
 from src.agents.strategist import StrategistAgent
 from src.agents.methodologist import MethodologistAgent
 from src.agents.coding_agent_v4_2 import CodingAgentV4_2
@@ -60,8 +60,8 @@ def test_full_pipeline():
     coding_llm = get_llm_client(env_prefix="CODING_")
     
     # 加载图谱
-    causal_graph = CausalGraphQuery("sandbox/static/data/causal_ontology_extracted.json")
-    method_graph = MethodGraphQuery("sandbox/static/data/method_knowledge_base.json")
+    causal_graph = CausalGraphQuery("src/graphs/data/causal/causal_ontology_extracted.json")
+    method_graph = MethodGraphQuery("src/graphs/data/method/method_knowledge_base.json")
     
     # 初始化 Agents
     strategist = StrategistAgent(

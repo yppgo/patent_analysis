@@ -11,7 +11,7 @@ from pathlib import Path
 class CausalGraphQuery:
     """因果图谱查询器"""
     
-    def __init__(self, ontology_path: str = "sandbox/static/data/causal_ontology_extracted.json"):
+    def __init__(self, ontology_path: str = "src/graphs/data/causal/causal_ontology_extracted.json"):
         """
         初始化因果图谱查询器
         

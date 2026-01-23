@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.utils.causal_graph_query import CausalGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
 from src.utils.variable_mapper import VariableMapper
 from src.utils.neo4j_connector import Neo4jConnector
 from dotenv import load_dotenv

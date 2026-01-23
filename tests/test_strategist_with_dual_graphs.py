@@ -9,8 +9,8 @@ import os
 from dotenv import load_dotenv
 from src.utils.llm_client import get_llm_client
 from src.agents.strategist import StrategistAgent
-from src.utils.causal_graph_query import CausalGraphQuery
-from src.utils.method_graph_query import MethodGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
+from src.graphs.method_graph_query import MethodGraphQuery
 
 # 加载环境变量
 load_dotenv()

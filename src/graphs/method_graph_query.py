@@ -11,7 +11,7 @@ from pathlib import Path
 class MethodGraphQuery:
     """方法图谱查询器"""
     
-    def __init__(self, knowledge_base_path: str = "sandbox/static/data/method_knowledge_base.json"):
+    def __init__(self, knowledge_base_path: str = "src/graphs/data/method/method_knowledge_base.json"):
         """
         初始化方法图谱查询器
         

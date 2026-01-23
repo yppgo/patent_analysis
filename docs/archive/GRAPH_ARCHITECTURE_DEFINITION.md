@@ -141,7 +141,7 @@ Step 5: 多智能体协同执行
 
 **核心方法**:
 ```python
-from src.utils.causal_graph_query import CausalGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
 
 query = CausalGraphQuery()
 

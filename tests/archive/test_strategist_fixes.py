@@ -16,8 +16,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.agents.strategist import StrategistAgent
-from src.utils.causal_graph_query import CausalGraphQuery
-from src.utils.method_graph_query import MethodGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
+from src.graphs.method_graph_query import MethodGraphQuery
 from anthropic import Anthropic
 import os
 

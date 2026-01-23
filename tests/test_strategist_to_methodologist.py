@@ -21,8 +21,8 @@ load_dotenv()
 # 使用项目的LLM客户端
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.utils.llm_client import get_llm_client
-from src.utils.causal_graph_query import CausalGraphQuery
-from src.utils.method_graph_query import MethodGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
+from src.graphs.method_graph_query import MethodGraphQuery
 
 # 导入Agents
 from src.agents.strategist import StrategistAgent
@@ -40,8 +40,8 @@ def test_full_pipeline():
     llm = get_llm_client()
     
     # 加载图谱
-    causal_graph = CausalGraphQuery("sandbox/static/data/causal_ontology_extracted.json")
-    method_graph = MethodGraphQuery("sandbox/static/data/method_knowledge_base.json")
+    causal_graph = CausalGraphQuery("src/graphs/data/causal/causal_ontology_extracted.json")
+    method_graph = MethodGraphQuery("src/graphs/data/method/method_knowledge_base.json")
     
     # 初始化Agents
     strategist = StrategistAgent(

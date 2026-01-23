@@ -3,7 +3,7 @@
 """
 
 import json
-from src.utils.causal_graph_query import CausalGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
 
 
 def test_hypothesis_generation():

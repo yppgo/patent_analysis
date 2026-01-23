@@ -1,5 +1,5 @@
 """测试分层推荐系统"""
-from src.utils.causal_graph_query import CausalGraphQuery
+from src.graphs.causal_graph_query import CausalGraphQuery
 import json
 
 query = CausalGraphQuery()
