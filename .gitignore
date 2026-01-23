@@ -79,3 +79,4 @@ _archive/
 *.json
 !config/*.json
 !sandbox/static/data/*.json
+!src/graphs/data/**/*.json

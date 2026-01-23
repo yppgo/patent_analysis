@@ -1,0 +1,3638 @@
+{
+  "meta": {
+    "name": "Patent Analysis Causal Ontology - Extracted Edition",
+    "version": "4.0 - Literature Extracted",
+    "description": "从50篇专利分析文献中抽取的因果推断知识库",
+    "created_date": "2026-01-15",
+    "last_updated": "2026-01-19",
+    "total_variables": 30,
+    "total_paths": 99,
+    "extraction_source": "50篇专利分析领域学术论文",
+    "extraction_method": "Claude PDF Analysis",
+    "cleaning_history": [
+      {
+        "date": "2026-01-19 15:18:46",
+        "action": "remove_unmapped_paths",
+        "original_paths": 135,
+        "cleaned_paths": 99,
+        "removed_paths": 36
+      }
+    ]
+  },
+  "variable_categories": {
+    "input_variables": {
+      "description": "外生变量/暴露变量，作为因果链的起点",
+      "count": 8
+    },
+    "mediator_variables": {
+      "description": "中介变量，传递因果效应",
+      "count": 9
+    },
+    "outcome_variables": {
+      "description": "结果变量，研究的最终目标",
+      "count": 9
+    },
+    "moderator_variables": {
+      "description": "调节变量，改变因果关系的强度或方向",
+      "count": 4
+    }
+  },
+  "variables": [
+    {
+      "id": "V01_tech_intensity",
+      "label": "技术投入强度",
+      "category": "input",
+      "definition": "组织在特定技术领域的专利产出规模",
+      "measurement": {
+        "metric": "patent_count",
+        "formula": "COUNT(patents WHERE topic = {query})",
+        "unit": "件"
+      }
+    },
+    {
+      "id": "V02_firm_size",
+      "label": "企业规模",
+      "category": "input",
+      "definition": "申请人的专利总量（跨领域）",
+      "measurement": {
+        "metric": "applicant_total_patents",
+        "formula": "COUNT(patents WHERE applicant = X)",
+        "unit": "件"
+      }
+    },
+    {
+      "id": "V03_rd_investment",
+      "label": "研发投资强度",
+      "category": "input",
+      "definition": "研发支出占营收比例",
+      "measurement": {
+        "metric": "rd_intensity",
+        "formula": "R&D_expenditure / Revenue",
+        "unit": "百分比"
+      }
+    },
+    {
+      "id": "V04_international_collab",
+      "label": "国际合作强度",
+      "category": "input",
+      "definition": "涉及外国发明人的专利占比",
+      "measurement": {
+        "metric": "foreign_coinventor_ratio",
+        "formula": "COUNT(patents with foreign inventors) / COUNT(total patents)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V05_university_collab",
+      "label": "产学研合作",
+      "category": "input",
+      "definition": "涉及大学/研究所的专利占比",
+      "measurement": {
+        "metric": "university_collab_ratio",
+        "formula": "COUNT(patents with university) / COUNT(total patents)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V06_prior_experience",
+      "label": "先验经验",
+      "category": "input",
+      "definition": "申请人在该领域的历史专利数量",
+      "measurement": {
+        "metric": "historical_patent_count",
+        "formula": "COUNT(patents WHERE applicant = X AND year < current_year)",
+        "unit": "件"
+      }
+    },
+    {
+      "id": "V07_policy_support",
+      "label": "政策支持",
+      "category": "input",
+      "definition": "政府资助项目相关专利占比",
+      "measurement": {
+        "metric": "government_funded_ratio",
+        "formula": "COUNT(patents with government funding) / COUNT(total patents)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V08_market_competition",
+      "label": "市场竞争强度",
+      "category": "input",
+      "definition": "该领域的专利申请人数量（HHI指数）",
+      "measurement": {
+        "metric": "herfindahl_index",
+        "formula": "SUM((firm_patents / total_patents)^2)",
+        "unit": "指数"
+      }
+    },
+    {
+      "id": "V09_tech_diversity",
+      "label": "技术跨界度",
+      "category": "mediator",
+      "definition": "专利涉及的IPC分类的多样性",
+      "measurement": {
+        "metric": "ipc_entropy",
+        "formula": "Shannon Entropy = -SUM(p_i * log(p_i))",
+        "unit": "熵值"
+      }
+    },
+    {
+      "id": "V10_science_linkage",
+      "label": "科学关联度",
+      "category": "mediator",
+      "definition": "专利引用非专利文献（NPL）的比例",
+      "measurement": {
+        "metric": "npl_ratio",
+        "formula": "COUNT(NPL citations) / COUNT(total citations)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V11_knowledge_recombination",
+      "label": "知识重组度",
+      "category": "mediator",
+      "definition": "新IPC组合占比",
+      "measurement": {
+        "metric": "new_combination_ratio",
+        "formula": "COUNT(new IPC pairs) / COUNT(total IPC pairs)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V12_tech_cycle_time",
+      "label": "技术迭代速度",
+      "category": "mediator",
+      "definition": "引用专利的平均年龄（TCT）",
+      "measurement": {
+        "metric": "tct",
+        "formula": "MEDIAN(current_year - cited_patent_year)",
+        "unit": "年"
+      }
+    },
+    {
+      "id": "V13_rd_efficiency",
+      "label": "研发效率",
+      "category": "mediator",
+      "definition": "单位研发投入的专利产出",
+      "measurement": {
+        "metric": "patent_per_inventor",
+        "formula": "COUNT(patents) / COUNT(DISTINCT inventors)",
+        "unit": "件/人"
+      }
+    },
+    {
+      "id": "V14_tech_breadth",
+      "label": "技术广度",
+      "category": "mediator",
+      "definition": "专利覆盖的IPC大类数量",
+      "measurement": {
+        "metric": "ipc_class_count",
+        "formula": "COUNT(DISTINCT IPC_class)",
+        "unit": "个"
+      }
+    },
+    {
+      "id": "V15_tech_depth",
+      "label": "技术深度",
+      "category": "mediator",
+      "definition": "主要IPC类别的专利集中度",
+      "measurement": {
+        "metric": "ipc_concentration",
+        "formula": "MAX(patents in IPC_class) / COUNT(total patents)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V16_tech_impact",
+      "label": "技术影响力",
+      "category": "outcome",
+      "definition": "专利的前向引用数量",
+      "measurement": {
+        "metric": "forward_citations",
+        "formula": "COUNT(citations received)",
+        "unit": "次"
+      }
+    },
+    {
+      "id": "V17_tech_breakthrough",
+      "label": "技术突破性",
+      "category": "outcome",
+      "definition": "颠覆性指数（CD Index）",
+      "measurement": {
+        "metric": "disruptive_index",
+        "formula": "(Nf - Nb) / (Nf + Nb + Nc)",
+        "unit": "指数"
+      }
+    },
+    {
+      "id": "V18_tech_independence",
+      "label": "技术独立性",
+      "category": "outcome",
+      "definition": "引用本国专利的比例",
+      "measurement": {
+        "metric": "domestic_citation_ratio",
+        "formula": "COUNT(domestic citations) / COUNT(total citations)",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V19_commercial_value",
+      "label": "商业价值",
+      "category": "outcome",
+      "definition": "专利维持年限",
+      "measurement": {
+        "metric": "maintenance_years",
+        "formula": "AVG(years patent maintained)",
+        "unit": "年"
+      }
+    },
+    {
+      "id": "V20_market_share",
+      "label": "市场份额",
+      "category": "outcome",
+      "definition": "申请人专利占该领域比例",
+      "measurement": {
+        "metric": "patent_share",
+        "formula": "firm_patents / total_field_patents",
+        "unit": "百分比"
+      }
+    },
+    {
+      "id": "V21_licensing_revenue",
+      "label": "许可收益",
+      "category": "outcome",
+      "definition": "专利许可和转让收入",
+      "measurement": {
+        "metric": "licensing_income",
+        "formula": "SUM(licensing fees)",
+        "unit": "货币"
+      }
+    },
+    {
+      "id": "V22_tech_maturity",
+      "label": "技术成熟度",
+      "category": "moderator",
+      "definition": "专利增长率（近5年）",
+      "measurement": {
+        "metric": "patent_growth_rate",
+        "formula": "(patents_recent - patents_past) / patents_past",
+        "unit": "百分比"
+      }
+    },
+    {
+      "id": "V23_industry_type",
+      "label": "产业类型",
+      "category": "moderator",
+      "definition": "高科技/传统产业分类",
+      "measurement": {
+        "metric": "industry_category",
+        "formula": "Based on IPC classification",
+        "unit": "类别"
+      }
+    },
+    {
+      "id": "V24_firm_type",
+      "label": "组织类型",
+      "category": "moderator",
+      "definition": "企业/大学/研究所/个人",
+      "measurement": {
+        "metric": "applicant_type",
+        "formula": "Classification based on applicant name",
+        "unit": "类别"
+      }
+    },
+    {
+      "id": "V25_geographic_location",
+      "label": "地理位置",
+      "category": "moderator",
+      "definition": "申请人所在国家/地区",
+      "measurement": {
+        "metric": "applicant_country",
+        "formula": "Based on applicant address",
+        "unit": "国家代码"
+      }
+    },
+    {
+      "id": "V26_catching_up",
+      "label": "技术追赶能力",
+      "category": "outcome",
+      "definition": "后发国家/企业在技术领域的追赶表现",
+      "measurement": {
+        "metric": "catch_up_index",
+        "formula": "技术差距缩小速度",
+        "unit": "指数"
+      }
+    },
+    {
+      "id": "V27_tacit_knowledge",
+      "label": "隐性知识",
+      "category": "mediator",
+      "definition": "难以编码和传播的知识比例",
+      "measurement": {
+        "metric": "tacit_ratio",
+        "formula": "基于专利文本复杂度和引用模式",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V28_tech_convergence",
+      "label": "技术融合度",
+      "category": "outcome",
+      "definition": "不同技术领域的融合程度",
+      "measurement": {
+        "metric": "convergence_index",
+        "formula": "跨IPC类别引用比例",
+        "unit": "指数"
+      }
+    },
+    {
+      "id": "V29_knowledge_spillover",
+      "label": "知识溢出",
+      "category": "mediator",
+      "definition": "技术知识向其他主体/领域的扩散程度",
+      "measurement": {
+        "metric": "spillover_ratio",
+        "formula": "被非同类申请人引用的比例",
+        "unit": "比例"
+      }
+    },
+    {
+      "id": "V30_tech_novelty",
+      "label": "技术新颖度",
+      "category": "outcome",
+      "definition": "专利技术的新颖程度",
+      "measurement": {
+        "metric": "novelty_score",
+        "formula": "基于引用模式和IPC组合新颖性",
+        "unit": "分数"
+      }
+    }
+  ],
+  "causal_paths": [
+    {
+      "path_id": "P01",
+      "source": "V09_tech_diversity",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "多技术融合提升URLLC整体性能",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 14,
+        "supporting_papers": [
+          "3GPP URLLC patent analysis",
+          "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies",
+          "A framework for assessing innovation collaboration partners and its application to BRICs",
+          "A dynamic framework for analyzing technology standardisation using network analysis and game theory",
+          "A hybrid method to trace technology evolution pathways: a case study of 3D printing"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "Several technologies including HARQ, scheduling, network management should collaborate to achieve URLLC",
+          "analyzing the impact across technologies is helpful for R&D planning and also to develop R&D strategies in these areas",
+          "out of all the BRIC countries, the Chinese technological landscape is the most diversified. Moreover, when we consider also the growth rates by technology class, we can observe that there are very dynamic changes"
+        ]
+      }
+    },
+    {
+      "path_id": "P02",
+      "source": "V03_rd_investment",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "研发投资规模直接影响专利申请数量和技术产出能力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 14,
+        "supporting_papers": [
+          "A framework for assessing innovation collaboration partners and its application to BRICs",
+          "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+          "A hybrid method to trace technology evolution pathways: a case study of 3D printing",
+          "A hybrid similarity measure method for patent portfolio analysis",
+          "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT",
+          "Clean Energy",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "the compound average growth rate (CAGR) in the number of patent applications ranged between 4% for Russia and Brazil and 29% for China between 2000 and 2008",
+          "ICON and L-ICON1 have several important advantages as compared to anti-TF monoclonal antibodies and antibody-drug conjugates: (i) The dissociation constant (Kd) for fVII binding to TF is up to 10−12 M, in contrast to anti-TF antibodies that have a Kd in a range of 10−8to 10−9 M for TF",
+          "3D printing is becoming a hot topic again, with the strong growth in patenting implying tremendous investment in the development of 3D printing"
+        ]
+      }
+    },
+    {
+      "path_id": "P03",
+      "source": "V05_university_collab",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "产学研合作通过外部研发活动增强技术影响力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 11,
+        "supporting_papers": [
+          "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies",
+          "A framework for technology assessment: Case of a Thai building material manufacturer",
+          "A framework for inventor collaboration recommendation system based on network approach",
+          "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018",
+          "A method for identifying hot patents and linking them to government-funded scientific research"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy",
+          "Materials",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "After all, no organization is so large that it has enough resources to excel in all technological areas or that it could not benefit from the advice of others. For instance, organizations could learn from small firms, which are often more innovative.",
+          "Expert judgment quantifications are accomplished with experts from the case company, Silpakorn University, and National Science and Technology Development Agency (NSTDA) in Thailand, thus covering opinions from the industry, academia, and the government.",
+          "An investigation by Favaro, Ninka, and Turvani (2012) concluded that inventor collaborations have sizable productivity effects on innovation"
+        ]
+      }
+    },
+    {
+      "path_id": "P04",
+      "source": "V29_knowledge_spillover",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "知识溢出通过后向引用体现，促进技术发展和影响力提升",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 8,
+        "supporting_papers": [
+          "A clustering-based approach for the evaluation of candidate emerging technologies",
+          "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap",
+          "A dynamic framework for analyzing technology standardisation using network analysis and game theory",
+          "A framework for inventor collaboration recommendation system based on network approach",
+          "A hybrid similarity measure method for patent portfolio analysis"
+        ],
+        "validated_domains": [
+          "General",
+          "Materials",
+          "Clean Energy",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "Backward citations imply that prior knowledge are incorporated into new applications during the development of a technology",
+          "Access to global pool of Intellectual Property Rights (IPR) via knowledge transfers and spill-over from transnational firm activity, firm-to-firm cooperation, mergers and acquisitions, exports of equipment and technology",
+          "the use of standard technology induces strategic benefits and enables the realisation of saving potentials... cheaper and faster communication with less uncertainty"
+        ]
+      }
+    },
+    {
+      "path_id": "P05",
+      "source": "V11_knowledge_recombination",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "知识重组创造新的技术应用领域",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 7,
+        "supporting_papers": [
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+          "A hierarchically sampling global sparse transformer in data stream mining for lightweight image restoration",
+          "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis",
+          "A patent analysis of cluster analysis",
+          "A novelty detection patent mining approach for analyzing technological opportunities"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "tissue engineering (163 PFs), tissue or organ (67), polylactic acid (46), 3D printer (45), polyethylene glycol (40), bioink (29)",
+          "stochastic sampler evenly stochastically samples spatial elements without using a single rule to cluster the elements, thereby obtaining generalized priors",
+          "Recombinant novelty dates back to Schumpeter who interpreted novelty as new combinations of more or less known resources"
+        ]
+      }
+    },
+    {
+      "path_id": "P06",
+      "source": "V11_knowledge_recombination",
+      "target": "V17_tech_breakthrough",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过SAO结构建模实现跨领域技术知识的重组和组合",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 7,
+        "supporting_papers": [
+          "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+          "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+          "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis",
+          "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering",
+          "A novel method of IP R&D using patent analysis and expert survey"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "By generalizing target technology function, the researcher can use existing technologies from various areas of engineering as a solution to the problem",
+          "ICON is a chimeric antibody-like homodimer with a molecular weight (MW) of 210 kilodalton (kDa) that consists of murine or human factor VII (fVII, the full-length peptide with 406 amino acid residues, the natural ligand to TF) fused to the Fc region of IgG1",
+          "A novel and generic methodology combining ontology based patent analysis and clinical meta-analysis is developed to analyze and identify the most effective patented techniques"
+        ]
+      }
+    },
+    {
+      "path_id": "P07",
+      "source": "V22_tech_maturity",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "更成熟的技术拥有更稳定的术语体系，在文献中出现频率更高，因此被文献计量方法更容易识别",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 5,
+        "supporting_papers": [
+          "A novel bibliometric-based technique to identify emerging photovoltaic technologies in a comparative assessment with expert review",
+          "A novel bibliometric-based technique to identify emerging photovoltaic technologies in a comparative assessment with expert review",
+          "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies",
+          "A framework for technology assessment: Case of a Thai building material manufacturer",
+          "A hybrid method to trace technology evolution pathways: a case study of 3D printing"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy",
+          "Materials"
+        ],
+        "sample_evidence": [
+          "more mature technologies are ranked higher than emerging ones... keywords designating more mature technologies tend to appear more often and therefore be more retrievable by bibliometric frequency analysis methods",
+          "the most frequently occurring MKs (with the highest rank) are 'dye-sensitised solar cells' (#13) and 'organic solar cells' (#16), which according to the experts have the highest TRL (5-6)",
+          "R&D in this area that does not increase value (e.g., it is old-fashioned or no consumers can be identified that are interested in future products from this area) leads to a strategic decision that decreases R&D activities in this area"
+        ]
+      }
+    },
+    {
+      "path_id": "P08",
+      "source": "V01_tech_intensity",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过专利申请数量和技术密集度提升技术影响力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 5,
+        "supporting_papers": [
+          "A clustering-based approach for the evaluation of candidate emerging technologies",
+          "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+          "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis",
+          "A patent analysis of cluster analysis",
+          "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems"
+        ],
+        "validated_domains": [
+          "General",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "If the number of claims in a patent is the greater, it is expected that the likelihood of candidate emerging technology is also higher",
+          "FOS makes TRIZ more acceptable to users in industry. Existing technology can be more easily understood than traditional TRIZ tools which use generic solutions",
+          "During the period from 1995 to 2008, the patent applications in medical technology increased rapidly worldwide"
+        ]
+      }
+    },
+    {
+      "path_id": "P09",
+      "source": "V14_tech_breadth",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "专利权利要求数量反映技术广度，更广的技术范围具有更高影响力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 5,
+        "supporting_papers": [
+          "A clustering-based approach for the evaluation of candidate emerging technologies",
+          "A framework for inventor collaboration recommendation system based on network approach",
+          "A New Approach for Measuring the Value of Patents Based on Structural Indicators for Ego Patent Citation Networks",
+          "A novel method of IP R&D using patent analysis and expert survey",
+          "A Patent Analysis for Sustainable Technology Management"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "The number of claims is associated with the innovative ability of the patent. The number of claims is also related to the scope of the patent",
+          "strength of coupling of a pair of inventors through common technological fields, for predicting links that represent potential collaborations",
+          "the more technological knowledge input, the more innovative the output"
+        ]
+      }
+    },
+    {
+      "path_id": "P10",
+      "source": "V04_international_collab",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "国际合作提升技术影响力和引用",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 5,
+        "supporting_papers": [
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+          "A framework for assessing innovation collaboration partners and its application to BRICs",
+          "A hybrid method to trace technology evolution pathways: a case study of 3D printing",
+          "A novel method of IP R&D using patent analysis and expert survey",
+          "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT",
+          "Clean Energy",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "The 10 most prolific nations in terms of publishing in 3D bioprinting are not geographically concentrated... USA and China are currently leading",
+          "In the year 2000, 18% of all Indian innovations were a result of international collaboration. Moreover, this number experienced an intensive growth over the last years and reached the level of over 50% by 2008.",
+          "the United States has more advantages to win more potential markets' shares for its competitive technological superiority"
+        ]
+      }
+    },
+    {
+      "path_id": "P11",
+      "source": "V07_policy_support",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "政策变化通过改善知识产权环境促进技术创新",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 5,
+        "supporting_papers": [
+          "A framework for assessing innovation collaboration partners and its application to BRICs",
+          "A framework for technology assessment: Case of a Thai building material manufacturer",
+          "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018",
+          "A method for identifying hot patents and linking them to government-funded scientific research",
+          "A patent quality analysis and classification system using self-organizing maps with support vector machine"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy",
+          "Materials"
+        ],
+        "sample_evidence": [
+          "an important stimulus of patent growth in such areas as biotechnology, business methods and computer-implemented inventions is due to the changes in the Brazilian patent law",
+          "Legal regulations: Regulatory requirements can serve as both barriers and incentives to the technology adoption process. This criterion is used to identify the candidate technologies that are likely to be supported and promoted by the government in Thailand.",
+          "The increasing rate reached 75% and 68% in 2004 and 2007, respectively, which are distinguished in Fig. 3 that leads us to believe that there are internal forces at work, such as appropriate policy creation and enforcement by concerned governments"
+        ]
+      }
+    },
+    {
+      "path_id": "P12",
+      "source": "V16_tech_impact",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "前向引用反映技术影响力，高影响力技术具有更高商业价值",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 4,
+        "supporting_papers": [
+          "A clustering-based approach for the evaluation of candidate emerging technologies",
+          "A New Approach for Measuring the Value of Patents Based on Structural Indicators for Ego Patent Citation Networks",
+          "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering",
+          "A patent quality classification model based on an artificial immune system"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Forward citation is considered an important indicator for measuring the value of technology. If the number of forward citation for a patent is high, this significantly increases real world patent auction prices as economic value",
+          "There is a positive correlation between a patent's technological value and the profits of the patent's assignee",
+          "patent citations are significantly correlated with its market value. The higher the frequency is, the higher the value of innovations and profit is"
+        ]
+      }
+    },
+    {
+      "path_id": "P13",
+      "source": "V05_university_collab",
+      "target": "V29_knowledge_spillover",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "协作环境中多用户共享标签行为促进知识在团队成员间的溢出效应",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 4,
+        "supporting_papers": [
+          "A collaborative desktop tagging system for group knowledge management based on concept space",
+          "A Methodology of Partner Selection for Sustainable Industry-University Cooperation Based on LDA Topic Model",
+          "A patent portfolio-based approach for assessing potential R&D partners: An application of the Shapley value",
+          "A patent-based approach for the identification of technology-based service opportunities"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "A collaborative environment has more than one user, and therefore establishes relations among users. The system enables users to tag heterogeneous items in computers to build a folksonomy.",
+          "corporate recognition of universities has turned into partnership that enables the long-term exchange of new ideas and innovation capabilities, as well as complementary expertise",
+          "R&D cooperation allows a firm not only to access external resources but also to reduce the innovation time span, share the risks associated with the innovation"
+        ]
+      }
+    },
+    {
+      "path_id": "P14",
+      "source": "V14_tech_breadth",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "更广泛的信息类型支持更多下游应用",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 4,
+        "supporting_papers": [
+          "A deep learning based method for extracting semantic information from patent documents",
+          "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+          "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry",
+          "A patent analysis of cluster analysis"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "fine-grained structured information from patent texts... support further applications such as trend analysis, competitor analysis, technological roadmapping",
+          "TF-targeting immunoconjugates may provide novel therapeutic approaches with potential to broadly impact the treatment regimen of these significant angiogenesis-dependent, as well as macrophage-associated, human diseases",
+          "The methods of integrating photovoltaic and building can be distinguished into two kinds of technology: installed PV module above a building and PV module integrated with the building"
+        ]
+      }
+    },
+    {
+      "path_id": "P15",
+      "source": "V06_prior_experience",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "发明者的先验经验通过调和接受性指数影响其技术影响力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 4,
+        "supporting_papers": [
+          "A framework for inventor collaboration recommendation system based on network approach",
+          "A hybrid method to trace technology evolution pathways: a case study of 3D printing",
+          "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems",
+          "A patent-based approach to identifying potential technology opportunities realizable from a firm's internal capabilities"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "This harmonic receptivity index that reflects the importance of inventors in a bias-free manner can be used to determine the direction of the recommendation of inventors",
+          "EP171069 and EP338751, as two groundbreaking patent families, play a very important role in pushing 3D printing technology forward",
+          "Before 2002, the backwardness of science and technology restricted the development of equipment... McDonnell Douglas, Boeing, Raytheon, and Northrop Grumman dominated the PHM patents"
+        ]
+      }
+    },
+    {
+      "path_id": "P16",
+      "source": "V11_knowledge_recombination",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "结合多种信息源的混合聚类方法能够更准确地识别和分类科学领域的认知结构",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 4,
+        "supporting_papers": [
+          "A hybrid mapping of information science",
+          "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry",
+          "A Patent Analysis for Sustainable Technology Management",
+          "A patent-based cross impact analysis for quantitative estimation of technological impact: The case of information and communication technology"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "Previous studies have shown that hybrid clustering methods that incorporate textual content and bibliometric information can outperform clustering methods that use only one of these components",
+          "component recombination is a very efficient source of innovation that firms widely resort to... obtaining a reduction of time, costs and development risk",
+          "causal relationships among technological keywords show knowledge integration paths for sustainable technology development"
+        ]
+      }
+    },
+    {
+      "path_id": "P17",
+      "source": "V03_rd_investment",
+      "target": "V13_rd_efficiency",
+      "effect_type": "inverted_u",
+      "effect_size": "medium",
+      "mechanism": "编码率与可靠性-时延权衡",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "3GPP URLLC patent analysis",
+          "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering",
+          "A New Method for Analysing Downloaded Data for Strategic Decision"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "The trade-off between latency and reliability should be considered depending on service. Generally longer codes have better reliability but they increase latency",
+          "the approach proposed by this research increases overall efficiency of new product design, but also involves higher cost than other approaches",
+          "The method is based on Relational Analysis. The particularity of this method is to work with sparse matrices and to obtain the best classification without any a priori fixation of number of classes."
+        ]
+      }
+    },
+    {
+      "path_id": "P18",
+      "source": "V02_firm_size",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "跨国公司规模优势带来更高的专利产出和技术影响力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "A comparative study of patent counts by the inventor country and the assignee country",
+          "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018",
+          "A hybrid method to trace technology evolution pathways: a case study of 3D printing"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "foreign owned enterprises have for patent performance are widely evidenced... firms doing international R&D tend to produce more patents than firms that conduct solely domestic R&D",
+          "The correlation coefficient between the TP and GDP was 0.73, which also represented a strong relationship. We inferred that cities with higher GDP had more intention of implementation on green buildings",
+          "3D Systems Inc. and Stratasys Inc., as two leading manufacturers and technology providers in the 3D printing field, have similar citation behaviors and tend to cite their own invitations"
+        ]
+      }
+    },
+    {
+      "path_id": "P19",
+      "source": "V22_tech_maturity",
+      "target": "V19_commercial_value",
+      "effect_type": "inverted_u",
+      "effect_size": "medium",
+      "mechanism": "技术成熟度适中时商业价值最大",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+          "A patent analysis method to trace technology evolutionary pathways",
+          "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase"
+        ],
+        "validated_domains": [
+          "Clean Energy",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "Due to the novelty of this technology, most of the patent applications have not been granted yet... overall application-granted-inactive patent proportion of 70%-17%-13%",
+          "basic research in the DSSCs domain was maturing; hence, many investors wanted to invest in DSSCs to push commercialization",
+          "few companies have commercialized OPV products so far... no polymer based OPV modules have suggested lifetimes – based on the results of unstandardized ageing tests – greater than 3–4 years"
+        ]
+      }
+    },
+    {
+      "path_id": "P20",
+      "source": "V04_international_collab",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "国际合作提高了发明的商业价值，更多专利申请到国际市场",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "A framework for assessing innovation collaboration partners and its application to BRICs",
+          "A patent analysis method to trace technology evolutionary pathways",
+          "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "the majority of patent applications covering Indian inventions, i.e., developed by Indian residents, are filed outside of India. Moreover, according to other sources, around 50% of these applications are filed to the US Patent and Trademark Office",
+          "Because of the high costs for patent application and maintenance, it is implied that patents pursued in multiple countries tend to have higher perceived commercial potential",
+          "U.S. patent holders showed a higher tendency to apply for patent rights in other countries... patent rights were requested by private companies, which shows a growing tendency of the hydrogen production industry in U.S."
+        ]
+      }
+    },
+    {
+      "path_id": "P21",
+      "source": "V13_rd_efficiency",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过FTDB提高研发效率，加速创新解决方案的发现和应用",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+          "A framework for technology assessment: Case of a Thai building material manufacturer",
+          "A hierarchically sampling global sparse transformer in data stream mining for lightweight image restoration"
+        ],
+        "validated_domains": [
+          "General",
+          "Materials",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "P&G accepted this conclusion and four months later developed a new product called WhiteStrips™ that uses a thin flexible film. In the first year after release, WhiteStrips™ generated $US 130 billion in revenue",
+          "Paint insulation has the highest score. This means that this technology has the most potential to be integrated with the company's roof tiles... It is easy to apply this technology with the existing manufacturing process because the company will only need to minor modifications.",
+          "using lightweight models for lower-level tasks is more elegant and efficient"
+        ]
+      }
+    },
+    {
+      "path_id": "P22",
+      "source": "V07_policy_support",
+      "target": "V03_rd_investment",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "政府补贴政策和激励机制促进企业和机构加大研发投入",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis",
+          "A patent analysis method to trace technology evolutionary pathways",
+          "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "During 2011 and 2012, in China government implemented a series of incentives, including direct subsidies for solar PV installations and a national feed-in tariff scheme",
+          "Japan has pursued solar cell research since 1974 when it started the 'Sunshine Project.' Since then, the New Energy and Industrial Technology Development Organization (NEDO) of Japan has undertaken several projects for preliminary research to support the development of solar cell technology",
+          "Most of the 115 patents found were granted between 2005-2009... such period of time coincides with the time of energetic crisis and the green movement for finding alternative fuels"
+        ]
+      }
+    },
+    {
+      "path_id": "P23",
+      "source": "V08_market_competition",
+      "target": "V03_rd_investment",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "国际贸易保护和市场竞争压力减少R&D投资",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 3,
+        "supporting_papers": [
+          "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis",
+          "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems",
+          "A patent review on strategies for biological control of mosquito vector"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "In 2012, the US Department of Commerce ruled on imposing anti-dumping duties on Chinese solar photovoltaic module products...the reduced orders led to China's overcapacity and subsequent decline in R&D patenting in 2014",
+          "The increasing demand for health monitoring, diagnostics, and prediction of useful life is convincing more companies to use PHM methods and applications",
+          "Continued high mortality and morbidity rates due to mosquito borne diseases indicate that the conventional mosquito control methods are largely inadequate to cope with disease outbreaks. Thus, there is a sustained demand for novel, effective, sustainable and eco-friendly approaches."
+        ]
+      }
+    },
+    {
+      "path_id": "P24",
+      "source": "V05_university_collab",
+      "target": "V17_tech_breakthrough",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "标准化组织合作推动技术突破",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "3GPP URLLC patent analysis",
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting"
+        ],
+        "validated_domains": [
+          "Biotech",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "3GPP has tried to standardize eMBB, mMTC, URLLC in 5G mobile telecommunication NR (New Radio)",
+          "The top three institutions are the Massachusetts Institute of Technology (USA), Nanyang Technological University (Singapore) and Tsinghua University (China)"
+        ]
+      }
+    },
+    {
+      "path_id": "P25",
+      "source": "V11_knowledge_recombination",
+      "target": "V28_tech_convergence",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "TSN与5G技术重组实现有线无线融合",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "3GPP URLLC patent analysis",
+          "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis"
+        ],
+        "validated_domains": [
+          "Clean Energy",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "Since URLLC is applied to not only wireless communication but also wired communication and furthermore TSN (Time Sensitive Network) is the basic technology applied to URLLC",
+          "The CPC trend of solar technology shows that development is gradually turning to thermal-PV hybrids technologies instead of individual PV or thermal technologies"
+        ]
+      }
+    },
+    {
+      "path_id": "P26",
+      "source": "V12_tech_cycle_time",
+      "target": "V26_catching_up",
+      "effect_type": "negative",
+      "effect_size": "large",
+      "mechanism": "长技术周期限制后发国家获得过时技术进行能力建设的机会，当后发者TIS处于形成阶段时，先发者TIS已接近成熟阶段，形成激烈竞争环境",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap",
+          "A patent analysis method to trace technology evolutionary pathways"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "A long TCT means that changes in the existing system are slow, making it difficult for the latecomer's chances to catch up... the long innovation cycle in clean-tech for air pollution limits the latecomer to have a chance to catch up",
+          "Basing our analysis on life cycle theory, we found that from 1991 to 2008 the patent counts were small but slowly increasing. After 2008, the rate of increase for DSSCs was quite high"
+        ]
+      }
+    },
+    {
+      "path_id": "P27",
+      "source": "V16_tech_impact",
+      "target": "V26_catching_up",
+      "effect_type": "negative",
+      "effect_size": "large",
+      "mechanism": "技术差距阻止后发者学习和产生增值产品升级，该差距阻止后发者达到超越阶段",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap",
+          "A novel approach to forecast promising technology through patent analysis"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "The technological gap limit latecomer to learn and generate upgrades in value-added products. This gap prevents latecomer from reaching the forging ahead stage",
+          "Forward citation of patents has been widely applied as an important indicator to evaluate the value of technology... The older and more important a patent is, the more frequently the patent tends to be cited by other patents"
+        ]
+      }
+    },
+    {
+      "path_id": "P28",
+      "source": "V03_rd_investment",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "研发投入促进技术创新和专利产出",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+          "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "Scientific output and patent activity are rapidly growing in 3D bioprinting... annual average growth of 20% and 40%, respectively",
+          "The demand for dental implants continues to attract companies and researchers to improve the design and development of dental implant components, devices, and techniques"
+        ]
+      }
+    },
+    {
+      "path_id": "P29",
+      "source": "V01_tech_intensity",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "深度学习技术的应用显著提升了专利信息抽取的自动化程度和准确性",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A deep learning based method for extracting semantic information from patent documents",
+          "A hierarchically sampling global sparse transformer in data stream mining for lightweight image restoration"
+        ],
+        "validated_domains": [
+          "General",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "a novel patent information extraction framework is proposed with leading deep learning models as its core modules... This framework gets rid of manual rules, domain vocabulary, and human intervention",
+          "the overall number of parameters is reduced by about 48.1% and the training time is reduced by about 44.7%, compared to the double-layer model"
+        ]
+      }
+    },
+    {
+      "path_id": "P30",
+      "source": "V29_knowledge_spillover",
+      "target": "V17_tech_breakthrough",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "基于功能抽象的检索能够发现跨领域的解决方案",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+          "A new method for extracting knowledge from patents to inspire designers during the problem-solving phase"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "FOS searches existing technologies to find the appropriate generic solution... by using existing technology, FOS makes TRIZ more acceptable to users in industry",
+          "Exploring concepts using the converter database opens the door to new concepts in different research fields and shows its significance in the inspiration phase and in the search for other ideas."
+        ]
+      }
+    },
+    {
+      "path_id": "P31",
+      "source": "V03_rd_investment",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "通过技术评估框架，合理的技术投资能够选择正确的技术，从而提高商业回报",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A framework for technology assessment: Case of a Thai building material manufacturer",
+          "A patent analysis of cluster analysis"
+        ],
+        "validated_domains": [
+          "General",
+          "Materials"
+        ],
+        "sample_evidence": [
+          "Financial return: Return On Investment (ROI), Payback period, and Internal Rate of Return (IRR) are the financial methods referred to by engineering managers to evaluate technologies. The highest ROI and shortest payback period reveal the best candidate technology.",
+          "Patents may be part of an offensive strategy, in that they align with growth plans, or a defensive one, in the sense that they are designed to keep others from participating in certain areas of business."
+        ]
+      }
+    },
+    {
+      "path_id": "P32",
+      "source": "V08_market_competition",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "市场竞争推动企业寻求技术创新以获得差异化优势",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A framework for technology assessment: Case of a Thai building material manufacturer",
+          "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018"
+        ],
+        "validated_domains": [
+          "Clean Energy",
+          "Materials"
+        ],
+        "sample_evidence": [
+          "The company operates in a highly competitive market with little differentiation among products offered by rivals. Apply technology that can help to differentiate its products from the competitors—Create new opportunities for niche segment markets with advance product features.",
+          "It is regarded that higher cost is the most deterring barrier to GB development across the globe. Other aspects such as lack of market demand and knowledge were also main considerations of green building implementation"
+        ]
+      }
+    },
+    {
+      "path_id": "P33",
+      "source": "V12_tech_cycle_time",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "快速迭代优化设计，从第一代ICON到第二代L-ICON1，提升技术性能",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+          "A patent time series processing component for technology intelligence by trend identification functionality"
+        ],
+        "validated_domains": [
+          "ICT",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "L-ICON1 has the following important improvements over the original ICON, including 50% smaller molecular weight, complete depletion of procoagulation activity and more effective than the original ICON in vivo in animal models of cancer",
+          "By observing and analyzing the way these activities vary over time, we can learn trend of the corresponding technologies from historical data"
+        ]
+      }
+    },
+    {
+      "path_id": "P34",
+      "source": "V10_science_linkage",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "引用政府资助科学论文的专利更容易成为热点专利，显示科学关联度对技术影响力的促进作用",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A method for identifying hot patents and linking them to government-funded scientific research",
+          "A patent quality analysis and classification system using self-organizing maps with support vector machine"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "over 3% of the patents that cited a scientific paper funded by one of four government agencies (DOE, NSF, NASA and NIH) became hot patents. Hence, patents that cite a government-funded paper were over 50% more likely to become hot patents than patents in general.",
+          "This citation means the number of non-patents who cited this patent"
+        ]
+      }
+    },
+    {
+      "path_id": "P35",
+      "source": "V14_tech_breadth",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术广度通过多特征植入体设计提升后发企业追赶能力",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis",
+          "A patent-based approach to identifying potential technology opportunities realizable from a firm's internal capabilities"
+        ],
+        "validated_domains": [
+          "General",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "Cluster 3 contains patents related to connections, dental implant systems, and washers and therefore includes multi-feature implants",
+          "3 M's excellent expertise in a wide range of materials will significantly expand the application domain of additive manufacturing."
+        ]
+      }
+    },
+    {
+      "path_id": "P36",
+      "source": "V06_prior_experience",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "专家先验知识提高数据清洗和术语识别准确性，进而提升研发效率度量",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A hybrid similarity measure method for patent portfolio analysis",
+          "A new method for extracting knowledge from patents to inspire designers during the problem-solving phase"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "expert knowledge to label the data... The basic elements of the trees in this case were the core terms identified by our expert panel",
+          "This definition and the subsequent selection depend entirely on judgment and user experience. On the basis of a poor definition, their method and therefore the results will be adversely affected."
+        ]
+      }
+    },
+    {
+      "path_id": "P37",
+      "source": "V29_knowledge_spillover",
+      "target": "V30_tech_novelty",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "已有知识的溢出和相似性会降低发明的新颖性程度",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis",
+          "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "novelty can only be determined in relation to established technologies, a novelty calculation is based on the similarity between a patent and all preceding patents",
+          "The spillover effects resulting from patent citations illustrate that patent citations are one of the knowledge sources for technological breakthroughs and product designs"
+        ]
+      }
+    },
+    {
+      "path_id": "P38",
+      "source": "V30_tech_novelty",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "高新颖性的发明更可能产生重大技术影响和突破性创新",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis",
+          "A novelty detection patent mining approach for analyzing technological opportunities"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "novel inventions are crucial factors for companies; technological change is enforced by inventions which are characterized by a high degree of novelty",
+          "The outlier patents may help R&D managers generate fresh ideas for exploring technological opportunities"
+        ]
+      }
+    },
+    {
+      "path_id": "P39",
+      "source": "V15_tech_depth",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "专利在前向引用网络中的相对位置反映其相对技术价值",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A New Approach for Measuring the Value of Patents Based on Structural Indicators for Ego Patent Citation Networks",
+          "A Patent Analysis for Sustainable Technology Management"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "The relative position of a patent in its forward PCN corresponds to its relative technological value",
+          "unit had the biggest influence on telematics with beta value 0.325, representing core technological capabilities"
+        ]
+      }
+    },
+    {
+      "path_id": "P40",
+      "source": "V09_tech_diversity",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术融合创造新的技术组合",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A novel method of IP R&D using patent analysis and expert survey",
+          "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase"
+        ],
+        "validated_domains": [
+          "Clean Energy",
+          "ICT"
+        ],
+        "sample_evidence": [
+          "recent patents had more IPC codes than older patents...technologies have been developed based on a fusion of diverse technologies",
+          "three types of companies are most vigorous in patenting their OPV related activities: (1) major players in the fields of electronics, (2) major players in the fields of materials chemistry, and (3) players with extensive knowledge in printing processes"
+        ]
+      }
+    },
+    {
+      "path_id": "P41",
+      "source": "V28_tech_convergence",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术融合创造新的应用领域和创新机会",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry",
+          "A novel approach to forecast promising technology through patent analysis"
+        ],
+        "validated_domains": [
+          "General",
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "interdisciplinary integration is an important trend, and building-integrated photovoltaic (BIPV) is an emerging technology involving the photovoltaic and building fields",
+          "This development in the wellness care industry is expanding from the convergence of IT and various industries... technologies can integrate and converge with other technological factors and create a brand-new technology"
+        ]
+      }
+    },
+    {
+      "path_id": "P42",
+      "source": "V01_tech_intensity",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "技术投入强度的提升通过改进预处理方法和发酵工艺来提高技术新颖度",
+      "evidence": {
+        "validated": true,
+        "evidence_count": 2,
+        "supporting_papers": [
+          "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness",
+          "A patent review on strategies for biological control of mosquito vector"
+        ],
+        "validated_domains": [
+          "Clean Energy",
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "Most methods patented in all countries were closely related to bioprocess design (bioreactor) or pre-treatment environmental conditions adjustment",
+          "In the category of non-recombinant agents, toxic peptides from microbes and biological consortia seemed to be the earliest technology noted right from the year 1965 whereas the patent filings for suppression of mosquito population using genetic modification techniques have emerged from the year 2000 onwards."
+        ]
+      }
+    },
+    {
+      "path_id": "P43",
+      "source": "V01_tech_intensity",
+      "target": "V12_tech_cycle_time",
+      "effect_type": "negative",
+      "effect_size": "large",
+      "mechanism": "短TTI和HARQ技术创新缩短传输时延",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "3GPP URLLC patent analysis"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "Short TTI can give good effect to low latency. Also TTI has a close relation with HARQ"
+        ]
+      }
+    },
+    {
+      "path_id": "P47",
+      "source": "V12_tech_cycle_time",
+      "target": "V17_tech_breakthrough",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "技术周期时间越短，表明技术发展速度快，更可能实现突破",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A clustering-based approach for the evaluation of candidate emerging technologies"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Within a fast-growing technological field, the technology cycle time values of the patents containing emerging technologies are smaller than the technology cycle time values of existing technologies"
+        ]
+      }
+    },
+    {
+      "path_id": "P48",
+      "source": "V04_international_collab",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "国际研发合作增加了专利发明中的投资比例，提高了研发效率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A comparative study of patent counts by the inventor country and the assignee country"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "countries with low leading patent invention also showed lower percentages of investment in patent invention"
+        ]
+      }
+    },
+    {
+      "path_id": "P49",
+      "source": "V24_firm_type",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "外资企业相比本土企业在创新产出方面表现更优",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A comparative study of patent counts by the inventor country and the assignee country"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "foreign ownership is associated with similar levels of innovation input but higher levels of innovation output and higher labour productivity"
+        ]
+      }
+    },
+    {
+      "path_id": "P50",
+      "source": "V25_geographic_location",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "税收天堂地区通过低税率政策吸引国际企业注册，获得专利所有权",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A comparative study of patent counts by the inventor country and the assignee country"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Countries with higher patent counts by assignee than by inventor were more likely to be tax havens"
+        ]
+      }
+    },
+    {
+      "path_id": "P51",
+      "source": "V04_international_collab",
+      "target": "V29_knowledge_spillover",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "国际合作促进了知识在不同国家间的流动和转移",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A comparative study of patent counts by the inventor country and the assignee country"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "cross-country patents as an indicator of international R&D collaboration"
+        ]
+      }
+    },
+    {
+      "path_id": "P52",
+      "source": "V27_tacit_knowledge",
+      "target": "V12_tech_cycle_time",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "隐性知识需要通过社会网络或特定情境下的实践来揭示和传播，有效转移需要广泛的个人接触、定期互动和信任",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "Such a long TCT suggests that clean-tech for air pollution may be mostly composed of tacit knowledge... The effective transfer of tacit knowledge generally requires extensive personal contact, regular interaction, and trust"
+        ]
+      }
+    },
+    {
+      "path_id": "P53",
+      "source": "V07_policy_support",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过强制许可、反垄断限制和出口许可放宽措施等政策工具来减少跨国壁垒",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "the application of compulsory license, antitrust restriction, and export license easing measures for clean-tech"
+        ]
+      }
+    },
+    {
+      "path_id": "P54",
+      "source": "V27_tacit_knowledge",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过协作标签和概念空间构建，将隐性知识外化为显性标记，提高研发工作效率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A collaborative desktop tagging system for group knowledge management based on concept space"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "The DCT system enables users to tag heterogeneous items in computers to build a folksonomy. It also has various features that resolve limitations of a folksonomy, including private organized items, reduced malicious users and controlled synonyms."
+        ]
+      }
+    },
+    {
+      "path_id": "P55",
+      "source": "V29_knowledge_spillover",
+      "target": "V11_knowledge_recombination",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "知识溢出通过概念空间中的标签关联实现知识要素的重新组合",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A collaborative desktop tagging system for group knowledge management based on concept space"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "A concept space is appropriate for representing relations among people, objects and tags. Concept spaces provide synonym control, tag recommendation and relevant search."
+        ]
+      }
+    },
+    {
+      "path_id": "P56",
+      "source": "V11_knowledge_recombination",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "知识重组通过标签推荐和相关搜索功能显著提高信息检索和组织效率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A collaborative desktop tagging system for group knowledge management based on concept space"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "The adoption rate of recommended tags for new documents increases by 10% after users have tagged five or six documents. The average precision, recall, and F-measure of DCT are 12.12%, 23.08%, and 26.92% higher than those of keyword searching."
+        ]
+      }
+    },
+    {
+      "path_id": "P59",
+      "source": "V03_rd_investment",
+      "target": "V29_knowledge_spillover",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "R&D投资通过技术项目组合产生跨技术领域的知识溢出效应",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "The internal R&D technology impact analysis focuses on the relationships between technologies of the many simultaneously run R&D projects in the organization's R&D department. Typically, one R&D project deals with several different technologies."
+        ]
+      }
+    },
+    {
+      "path_id": "P60",
+      "source": "V29_knowledge_spillover",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "知识溢出使组织能够识别相对弱势并制定追赶策略",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "If CCI(A,B) equals negative one then a relative weakness in this area is observed for the organization... A potential strategic decision could be to increase R&D activities in this area. Alternatively, to gain strength in this area, the organization could outsource these R&D activities"
+        ]
+      }
+    },
+    {
+      "path_id": "P61",
+      "source": "V09_tech_diversity",
+      "target": "V28_tech_convergence",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术多样性促进跨学科技术融合",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "multifunctional manufacturing, where multiple dissimilar materials can be printed within a single process... 3D bioprinting can go beyond the deposition of individual passive components"
+        ]
+      }
+    },
+    {
+      "path_id": "P62",
+      "source": "V01_tech_intensity",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "技术投入强度决定技术追赶速度",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "China is rapidly approaching the USA, and is forecasted to outpace the country in total expenditures in R&D by 2019"
+        ]
+      }
+    },
+    {
+      "path_id": "P63",
+      "source": "V02_firm_size",
+      "target": "V04_international_collab",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "跨国企业通过在新兴市场设立研发中心促进国际创新合作",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A framework for assessing innovation collaboration partners and its application to BRICs"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "It is the increasing presence of multinational firms conducting R&D in India that shape the country's R&D landscape and explains the high co-patenting level of Indian inventors."
+        ]
+      }
+    },
+    {
+      "path_id": "P64",
+      "source": "V06_prior_experience",
+      "target": "V04_international_collab",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "先验经验通过建立信任和减少合作障碍促进国际合作",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A framework for assessing innovation collaboration partners and its application to BRICs"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "The openness to collaboration with foreign actors is not only a function of a reliable legal framework, macroeconomic and political stability, but also of cultural proximity"
+        ]
+      }
+    },
+    {
+      "path_id": "P65",
+      "source": "V02_firm_size",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "更大的数据规模支撑更好的深度学习模型训练效果",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A deep learning based method for extracting semantic information from patent documents"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "the performance of entity identification performance in term of F1 score is positively correlated to support degree, such as 1,958 support degree for component type versus 21 and 13 support degree for consequence and other type"
+        ]
+      }
+    },
+    {
+      "path_id": "P66",
+      "source": "V13_rd_efficiency",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "自动化程度和准确性的提升直接改善技术影响力",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A deep learning based method for extracting semantic information from patent documents"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "our framework out-performs the traditional one in terms of automation and accuracy, and is capable of extracting fine-grained structured information from patent texts"
+        ]
+      }
+    },
+    {
+      "path_id": "P67",
+      "source": "V05_university_collab",
+      "target": "V14_tech_breadth",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "标准化的实体和关系类型定义扩展了技术覆盖范围",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A deep learning based method for extracting semantic information from patent documents"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "17 types of entities and 15 types of semantic relations... Much more types of entities and semantic relations are supported"
+        ]
+      }
+    },
+    {
+      "path_id": "P68",
+      "source": "V28_tech_convergence",
+      "target": "V20_market_share",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "技术融合通过增强兼容性和网络效应来获得市场优势",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A dynamic framework for analyzing technology standardisation using network analysis and game theory"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "compatibility is now considered a core function of technology standards... the value of compatibility is recognised as its effect showed a significant impact"
+        ]
+      }
+    },
+    {
+      "path_id": "P69",
+      "source": "V06_prior_experience",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "已有技术能力为新技术标准化提供基础",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A dynamic framework for analyzing technology standardisation using network analysis and game theory"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "HD-DVD was derived from existing DVD, it required lower marginal cost and had a larger installed base compared to Blu-ray"
+        ]
+      }
+    },
+    {
+      "path_id": "P70",
+      "source": "V05_university_collab",
+      "target": "V20_market_share",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "产业联盟通过协调多方利益获得市场控制力",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A dynamic framework for analyzing technology standardisation using network analysis and game theory"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "cooperation with content providers is critical for standardisation... Sony enhanced copyright protection whereas Toshiba ignored it"
+        ]
+      }
+    },
+    {
+      "path_id": "P73",
+      "source": "V05_university_collab",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "合作关系通过提高研发生产率来增强创新效率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A framework for inventor collaboration recommendation system based on network approach"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "According to Abramo, D'Angelo, and Di Costa (2009), in academia, collaboration is found to be beneficial to the productivity of researchers"
+        ]
+      }
+    },
+    {
+      "path_id": "P78",
+      "source": "V29_knowledge_spillover",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过Fisher逆卡方方法整合文本和引文信息，提高聚类算法的准确性和稳定性",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A hybrid mapping of information science"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Fisher's inverse chi-square method also did quantitatively and qualitatively better than the pure text-based method... we clearly observed an improvement by the combination"
+        ]
+      }
+    },
+    {
+      "path_id": "P79",
+      "source": "V05_university_collab",
+      "target": "V28_tech_convergence",
+      "effect_type": "positive",
+      "effect_size": "small",
+      "mechanism": "通过科学-技术界面的连接，如专利引用、产业研究、大学专利等形式促进技术融合",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A hybrid mapping of information science"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Clusters 3 and 5 are connected through the science-technology interface as represented among others by national science and technology indicators, patent citations, industry research, patenting universities"
+        ]
+      }
+    },
+    {
+      "path_id": "P80",
+      "source": "V05_university_collab",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "产学研合作促进基础研究向临床应用转化，创造新型治疗方法",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "In earlier work at Yale University, Zhiwei Hu and Alan Garen co-invented the first neovascular-targeting Immuno-Conjugate named ICON"
+        ]
+      }
+    },
+    {
+      "path_id": "P82",
+      "source": "V06_prior_experience",
+      "target": "V11_knowledge_recombination",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "路径依赖的演化模式使企业倾向于在熟悉的技术领域内搜索和重组知识",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "Innovative activity develops according to path-dependent evolutionary models, that is to say it remains strongly constrained by experience and knowledge either accumulated by the firm or available in the industrial sector"
+        ]
+      }
+    },
+    {
+      "path_id": "P83",
+      "source": "V06_prior_experience",
+      "target": "V15_tech_depth",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "企业倾向于在熟悉的技术空间内集中专利活动，深化技术能力",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "large firms tend to concentrate patenting activity within a familiar technological space or domain"
+        ]
+      }
+    },
+    {
+      "path_id": "P84",
+      "source": "V11_knowledge_recombination",
+      "target": "V12_tech_cycle_time",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "重组现有知识比从零开发新知识更快速",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "firms adopting innovation strategies centered on product modular design and component reuse acquire a flexibility enabling them to increase their competitive capabilities"
+        ]
+      }
+    },
+    {
+      "path_id": "P85",
+      "source": "V27_tacit_knowledge",
+      "target": "V29_knowledge_spillover",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "隐性知识的特异性和嵌入性使其难以转移",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "technological knowledge tends to be very specific and is incorporated in the innovator background and experience (henceforth, absolutely idiosyncratic), its usage far from the place where it is generated can be costly and, sometimes, impossible"
+        ]
+      }
+    },
+    {
+      "path_id": "P86",
+      "source": "V07_policy_support",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "政府资助促进前沿技术发展，提高技术新颖度",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A method for identifying hot patents and linking them to government-funded scientific research"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Strong links between these clusters and scientific research. Such links were regarded as a sign that the patents in the clusters described innovative new ideas, rather than just incremental advances upon earlier patents."
+        ]
+      }
+    },
+    {
+      "path_id": "P87",
+      "source": "V10_science_linkage",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "专利与临床试验的科学关联提高商业化成功概率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "medical related technologies rely on clinical trials to validate and gain regulatory approval for patient treatment even though patents, protecting the intellectual property rights of inventors, have been granted"
+        ]
+      }
+    },
+    {
+      "path_id": "P90",
+      "source": "V27_tacit_knowledge",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "通过3层树结构识别核心术语，将隐性技术知识显性化，提升语义相似性度量效果",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A hybrid similarity measure method for patent portfolio analysis"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "we identify and highlight core terms in a 3-level tree structure and compute the semantic similarities by comparing the tree-based structures"
+        ]
+      }
+    },
+    {
+      "path_id": "P94",
+      "source": "V06_prior_experience",
+      "target": "V30_tech_novelty",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "先验经验和已有技术基础会限制新颖性的产生",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "novelty is also directly related to what was known before. In the context of patents 'what was known before' is usually referred to as 'state of the art' or 'prior art'"
+        ]
+      }
+    },
+    {
+      "path_id": "P95",
+      "source": "V09_tech_diversity",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "专利族分析帮助筛选关键专利，patent citation分析追溯核心技术，提高研发资源配置效率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "patent family and patent citations can provide important information for business intelligence and for technology management and strategy formation reference"
+        ]
+      }
+    },
+    {
+      "path_id": "P100",
+      "source": "V22_tech_maturity",
+      "target": "V30_tech_novelty",
+      "effect_type": "inverted_u",
+      "effect_size": "medium",
+      "mechanism": "技术发展呈现从新兴到成熟的演进轨迹，影响技术新颖性",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "Most renewable energy technologies are in the late introductory stage of the product life cycle...The mainstream technology evolves from off-grid to grid-connected systems"
+        ]
+      }
+    },
+    {
+      "path_id": "P101",
+      "source": "V22_tech_maturity",
+      "target": "V12_tech_cycle_time",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "技术成熟度提升导致技术迭代速度放缓",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "BIPV technology is transformed from the emerging stage to the growth stage of a long-term life cycle"
+        ]
+      }
+    },
+    {
+      "path_id": "P102",
+      "source": "V07_policy_support",
+      "target": "V20_market_share",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "政府激励政策和补贴推动产业发展",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "when developed countries are promoting renewable energy, they rely on the government's four policy factors, including incentive policy, subsidies, low installation cost, quick approval process, and lending policies for financial institutions"
+        ]
+      }
+    },
+    {
+      "path_id": "P103",
+      "source": "V08_market_competition",
+      "target": "V13_rd_efficiency",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "市场竞争压力促使企业提升R&D效率",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "However, the BIPV manufacturing industry faces global competitive pressures"
+        ]
+      }
+    },
+    {
+      "path_id": "P104",
+      "source": "V02_firm_size",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "三方专利族（在美日欧同时申请）表明企业规模和国际化能力，能够承担高成本的跨国专利申请，反映技术追赶实力",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A novel approach to forecast promising technology through patent analysis"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Triadic patent family is now used as an important indicator when evaluating the technology level of countries or companies because the United States, Japan, and Europe are regarded as major markets"
+        ]
+      }
+    },
+    {
+      "path_id": "P105",
+      "source": "V18_tech_independence",
+      "target": "V26_catching_up",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "独立权利要求数量代表技术独立性和发明数量，更多的独立权利要求意味着更强的技术追赶能力",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A novel approach to forecast promising technology through patent analysis"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Because the number of independent claims is proportional to the number of inventions, a large number of independent claims per patent may be viewed as a technology with robust rights"
+        ]
+      }
+    },
+    {
+      "path_id": "P107",
+      "source": "V03_rd_investment",
+      "target": "V12_tech_cycle_time",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "增加研发投入能够加速技术发展进入快速增长阶段",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A novel three-dimension perspective to explore technology evolution"
+        ],
+        "validated_domains": [
+          "Materials"
+        ],
+        "sample_evidence": [
+          "When entering the growth period, companies should increase their R&D and innovation investments and then maximize the benefit of industrializing a new technology or product."
+        ]
+      }
+    },
+    {
+      "path_id": "P108",
+      "source": "V22_tech_maturity",
+      "target": "V03_rd_investment",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "技术成熟度影响研发投资策略，成熟期企业转向低成本策略",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A novel three-dimension perspective to explore technology evolution"
+        ],
+        "validated_domains": [
+          "Materials"
+        ],
+        "sample_evidence": [
+          "In this phase, with the market and main functions stable, enterprises can return to low-cost strategy"
+        ]
+      }
+    },
+    {
+      "path_id": "P109",
+      "source": "V04_international_collab",
+      "target": "V18_tech_independence",
+      "effect_type": "positive",
+      "effect_size": "small",
+      "mechanism": "国际专利布局策略提升技术独立性和竞争优势",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A novel three-dimension perspective to explore technology evolution"
+        ],
+        "validated_domains": [
+          "Materials"
+        ],
+        "sample_evidence": [
+          "investors or institutions will first apply for a patent in their own country and then apply for a patent in other countries as a competitive strategy"
+        ]
+      }
+    },
+    {
+      "path_id": "P110",
+      "source": "V18_tech_independence",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "专利权利要求数量决定了发明的保护范围，更广的范围能提供更强的商业保护",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A novelty detection patent mining approach for analyzing technological opportunities"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Claims determine the boundaries of the exclusive rights for the invention that can be legally protected and enforced. The number of claims thus determines the breadth of the rights granted by a patent"
+        ]
+      }
+    },
+    {
+      "path_id": "P112",
+      "source": "V22_tech_maturity",
+      "target": "V29_knowledge_spillover",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术成熟度提升促进知识在不同应用领域的溢出",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "With the rapid development of sensing and communication technologies since 2002, PHM has emerged... The usage of PHM will be extended to more fields in electrical systems"
+        ]
+      }
+    },
+    {
+      "path_id": "P113",
+      "source": "V28_tech_convergence",
+      "target": "V16_tech_impact",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "技术融合推动PHM技术影响力提升",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "networked sensing systems are replacing single sensor measurement because they can provide PHM algorithms with detailed information... from offline data analysis to online data analysis"
+        ]
+      }
+    },
+    {
+      "path_id": "P114",
+      "source": "V24_firm_type",
+      "target": "V04_international_collab",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "私人企业比学术机构更倾向于进行国际专利申请",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "In China academic institutions are more productive in developing methods... whilst in the US, patent rights were requested by private companies"
+        ]
+      }
+    },
+    {
+      "path_id": "P115",
+      "source": "V25_geographic_location",
+      "target": "V09_tech_diversity",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "不同地理位置的技术发展策略差异导致技术多样性",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "In Japan patents concentrate on the use of few production methods compared to China... In China the diversity of production methods is wider"
+        ]
+      }
+    },
+    {
+      "path_id": "P116",
+      "source": "V22_tech_maturity",
+      "target": "V13_rd_efficiency",
+      "effect_type": "negative",
+      "effect_size": "medium",
+      "mechanism": "技术成熟度低导致工艺创新不足，研发效率受限",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "while product innovation is high – seen by the device patenting activity-, the rate of process innovation is low – seen by the lack of IP treating encapsulation"
+        ]
+      }
+    },
+    {
+      "path_id": "P117",
+      "source": "V24_firm_type",
+      "target": "V03_rd_investment",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "私营企业在早期技术阶段投资更积极",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase"
+        ],
+        "validated_domains": [
+          "Clean Energy"
+        ],
+        "sample_evidence": [
+          "The majority of patents are property of private companies. Only two public organizations (institutes) are ranked in the top fifteen and only eight in the top fifty"
+        ]
+      }
+    },
+    {
+      "path_id": "P128",
+      "source": "V14_tech_breadth",
+      "target": "V30_tech_novelty",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术广度通过跨领域搜索和发现矩阵中的空白单元格识别技术新颖性机会",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A new method for extracting knowledge from patents to inspire designers during the problem-solving phase"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "The first evolution opportunities are found in the empty cells, which means that the corresponding concept does not yet exist."
+        ]
+      }
+    },
+    {
+      "path_id": "P132",
+      "source": "V22_tech_maturity",
+      "target": "V09_tech_diversity",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术成熟度促进了从单一生物制剂向多元化技术路径发展",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent review on strategies for biological control of mosquito vector"
+        ],
+        "validated_domains": [
+          "Biotech"
+        ],
+        "sample_evidence": [
+          "The patent analysis revealed that comparable number of patent documents were filed in two technology categories: non-recombinant agents and genetically modified (GM) agents."
+        ]
+      }
+    },
+    {
+      "path_id": "P133",
+      "source": "V29_knowledge_spillover",
+      "target": "V28_tech_convergence",
+      "effect_type": "positive",
+      "effect_size": "large",
+      "mechanism": "专利共分类分析揭示技术领域间的知识流动，促进技术服务融合",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent-based approach for the identification of technology-based service opportunities"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "the convergence between technologies and services has been accelerated and so the boundaries of manufacturing and service industries are rapidly deteriorating"
+        ]
+      }
+    },
+    {
+      "path_id": "P134",
+      "source": "V09_tech_diversity",
+      "target": "V19_commercial_value",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术跨界度通过多重分类提高技术服务的商业机会识别",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent-based approach for the identification of technology-based service opportunities"
+        ],
+        "validated_domains": [
+          "General"
+        ],
+        "sample_evidence": [
+          "Technology-based services provide service providers with benefits such as reduction of labor costs, creation of value-added services, and improvement of service quality"
+        ]
+      }
+    },
+    {
+      "path_id": "P135",
+      "source": "V16_tech_impact",
+      "target": "V12_tech_cycle_time",
+      "effect_type": "positive",
+      "effect_size": "medium",
+      "mechanism": "技术影响力促进技术发展速度",
+      "evidence": {
+        "validated": false,
+        "evidence_count": 1,
+        "supporting_papers": [
+          "A patent-based cross impact analysis for quantitative estimation of technological impact: The case of information and communication technology"
+        ],
+        "validated_domains": [
+          "ICT"
+        ],
+        "sample_evidence": [
+          "advancement of one technology tend to affect the other technology. For example, advancement in technology 701 will also facilitate the development of technology 340"
+        ]
+      }
+    }
+  ],
+  "complex_relations": {
+    "mediation_effects": [
+      {
+        "paper": "3GPP URLLC patent analysis",
+        "domain": "ICT",
+        "path": "V05_university_collab → V11_knowledge_recombination → V28_tech_convergence",
+        "description": "技术标准化通过知识重组促进技术融合",
+        "evidence": "3GPP standardization enables TSN integration technology, synchronization technology. DS-TT and NW-TT are used between TSN system and 5G mobile network"
+      },
+      {
+        "paper": "3GPP URLLC patent analysis",
+        "domain": "ICT",
+        "path": "V09_tech_diversity → V29_knowledge_spillover → V16_tech_impact",
+        "description": "技术多样性通过知识溢出影响技术影响力",
+        "evidence": "Different services require different reliability and different latency. But high reliability and low latency are essential and mandatory"
+      },
+      {
+        "paper": "A novel bibliometric-based technique to identify emerging photovoltaic technologies in a comparative assessment with expert review",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity → unmapped_terminology_consolidation → V13_rd_efficiency",
+        "description": "术语标准化中介技术成熟度对检索效果的影响",
+        "evidence": "technologies have a more consolidated jargon in recent than in previous years, so retrieved keywords have higher frequencies"
+      },
+      {
+        "paper": "A clustering-based approach for the evaluation of candidate emerging technologies",
+        "domain": "General",
+        "path": "clustering_algorithm → technology_clusters → candidate_emerging_technology",
+        "description": "技术聚类算法通过技术相似性识别中介新兴技术群体",
+        "evidence": "The clustering of technologies is important both in terms of time and cost. The clustering of inventions and the making of common inferences are important for investors to make the right investment choice"
+      },
+      {
+        "paper": "A comparative study of patent counts by the inventor country and the assignee country",
+        "domain": "General",
+        "path": "V25_geographic_location → tax_policy → V19_commercial_value",
+        "description": "地理位置通过税收政策中介影响专利所有权分布",
+        "evidence": "those countries are usually regarded as tax havens as they tend to charge low tax rates, and the international firms there could sometimes boil down to paper companies"
+      },
+      {
+        "paper": "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap",
+        "domain": "Clean Energy",
+        "path": "V27_tacit_knowledge → V12_tech_cycle_time → V26_catching_up",
+        "description": "隐性知识通过延长技术周期时间中介影响追赶能力",
+        "evidence": "clean-tech for air pollution may be mostly composed of tacit knowledge... hence the pace of innovation involving the effective transfer of tacit knowledge becomes relatively slow... making it difficult for the latecomer's chances to catch up"
+      },
+      {
+        "paper": "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap",
+        "domain": "Clean Energy",
+        "path": "V04_international_collab → V29_knowledge_spillover → V16_tech_impact",
+        "description": "国际合作通过知识溢出中介影响技术影响力",
+        "evidence": "Access to global pool of knowledge via collaborative research and international workshops → Access to global pool of IPR via knowledge transfers and spill-over from transnational firm activity"
+      },
+      {
+        "paper": "A collaborative desktop tagging system for group knowledge management based on concept space",
+        "domain": "ICT",
+        "path": "V05_university_collab → V29_knowledge_spillover → V11_knowledge_recombination → V13_rd_efficiency",
+        "description": "协作标签通过知识溢出和知识重组的中介作用提高研发效率",
+        "evidence": "The proposed system delivers the collective efficiency, and reduces the discussion time, since the relationships between tags and patents are accumulated as researchers continuously use the DCT system."
+      },
+      {
+        "paper": "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies",
+        "domain": "General",
+        "path": "V03_rd_investment → V09_tech_diversity → V16_tech_impact",
+        "description": "研发投资通过技术多样性中介影响技术影响力",
+        "evidence": "Therefore, each internal R&D project is assigned to one or several technologies from a specific technology list or taxonomy by multi-label classification. Analyzing this multiple classification shows which R&D projects are frequently assigned to specific technologies. This enables to calculate the cross impact index estimating the impact across these technologies"
+      },
+      {
+        "paper": "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+        "domain": "Biotech",
+        "path": "V03_rd_investment → V11_knowledge_recombination → V17_tech_breakthrough",
+        "description": "研发投资通过知识重组影响技术突破",
+        "evidence": "Scientific and technological research is growing exponentially... knowledge clusters reveal the strongest trends in current 3D bioprinting research"
+      },
+      {
+        "paper": "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+        "domain": "Biotech",
+        "path": "V04_international_collab → V29_knowledge_spillover → V16_tech_impact",
+        "description": "国际合作通过知识溢出提升技术影响力",
+        "evidence": "The USA and China are currently leading in the total number of scientific publications and patents in the field"
+      },
+      {
+        "paper": "A framework for assessing innovation collaboration partners and its application to BRICs",
+        "domain": "General",
+        "path": "V02_firm_size → V04_international_collab → V16_tech_impact",
+        "description": "跨国企业作为中介，连接本土研发能力与国际创新网络",
+        "evidence": "MNEs have very strong interest in the inventive potential of India and, on the one hand, they actively shape the country's inventive landscape. Moreover, policy measures directed towards foreign companies operating in India have created incentives for multinational companies to integrate R&D activities"
+      },
+      {
+        "paper": "A deep learning based method for extracting semantic information from patent documents",
+        "domain": "General",
+        "path": "V01_tech_intensity → V13_rd_efficiency → V16_tech_impact",
+        "description": "深度学习技术通过提升研发效率间接改善技术影响力",
+        "evidence": "deep learning models... achieves much better modularity... gets rid of manual rules, domain vocabulary, and human intervention... out-performs the traditional one in terms of automation and accuracy"
+      },
+      {
+        "paper": "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+        "domain": "General",
+        "path": "V01_tech_intensity → V11_knowledge_recombination → V16_tech_impact",
+        "description": "功能抽象作为技术投入与技术影响力之间的中介变量",
+        "evidence": "Because a direct technology search is very ineffective, implementing an FTDB requires that technology function be generalized. By generalizing target technology function, the researcher can use existing technologies from various areas"
+      },
+      {
+        "paper": "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+        "domain": "General",
+        "path": "V11_knowledge_recombination → V27_tacit_knowledge → V17_tech_breakthrough",
+        "description": "语义处理作为知识重组和技术突破之间的关键机制",
+        "evidence": "By modeling SAO structures using a fact-oriented ontological approach, the relationships among technological terms are defined. These relationships can support function generalization and remove the semantic confusion problem"
+      },
+      {
+        "paper": "A dynamic framework for analyzing technology standardisation using network analysis and game theory",
+        "domain": "ICT",
+        "path": "V16_tech_impact → unmapped_tech_attractiveness → unmapped_tech_preference",
+        "description": "技术竞争力通过技术吸引力中介影响企业技术偏好",
+        "evidence": "a firm's technology preference refers to relative preference between two technologies, and it is calculated by multiplying a firm's TC and TA"
+      },
+      {
+        "paper": "A dynamic framework for analyzing technology standardisation using network analysis and game theory",
+        "domain": "ICT",
+        "path": "unmapped_complementary_goods → unmapped_installed_base → V20_market_share",
+        "description": "互补产品通过安装基数中介影响标准化结果",
+        "evidence": "Sony's decision on the utilisation of Blu-ray as a component in the ancillary product PlayStation 3 led to a larger installed base in 2007"
+      },
+      {
+        "paper": "A framework for technology assessment: Case of a Thai building material manufacturer",
+        "domain": "Materials",
+        "path": "V03_rd_investment → V22_tech_maturity → V19_commercial_value",
+        "description": "技术成熟度通过降低制造难度中介技术投资对商业价值的影响",
+        "evidence": "Manufacturing difficulties or ease of technology adoption: The adoption of new technology may result in manufacturing problems that impact production capability. The new selected technology should be reasonable in both investment and return."
+      },
+      {
+        "paper": "A framework for inventor collaboration recommendation system based on network approach",
+        "domain": "General",
+        "path": "V05_university_collab → V29_knowledge_spillover → V16_tech_impact",
+        "description": "共同合作发明者作为中介变量，传递发明者间的合作关系对创新产出的影响",
+        "evidence": "strength of derived co-inventorship relation between a pair of inventors through their common co-inventors...for predicting links that represent potential collaborations"
+      },
+      {
+        "paper": "A framework for inventor collaboration recommendation system based on network approach",
+        "domain": "General",
+        "path": "V05_university_collab → V16_tech_impact → patent_citations",
+        "description": "引用关系作为技术影响力的中介机制",
+        "evidence": "the values of attributes of works identified by the citation network can be used to convert the 2-mode affiliation network to a weighted network"
+      },
+      {
+        "paper": "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018",
+        "domain": "Clean Energy",
+        "path": "V01_tech_intensity → V13_rd_efficiency → V16_tech_impact",
+        "description": "能源效率作为中介变量连接技术投入和绿色建筑性能",
+        "evidence": "Energy efficiency has shifted from low to zero energy buildings or even beyond it in recent years. Energy efficiency was the most important drive to achieve green buildings"
+      },
+      {
+        "paper": "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018",
+        "domain": "Clean Energy",
+        "path": "V01_tech_intensity → unmapped_life_cycle_assessment → V16_tech_impact",
+        "description": "生命周期评估方法作为中介，连接技术投入与建筑性能评价",
+        "evidence": "The life cycle assessment (LCA) is a popular technique for the analysis of the technical side of GBs... Much attention has been paid to LCA because people began to focus more on the actual performance of the GBs"
+      },
+      {
+        "paper": "A hybrid keyword and patent class methodology for selecting relevant sets of patents for a technological field",
+        "domain": "General",
+        "path": "unmapped_search_terms → unmapped_patent_classes → unmapped_patent_set_quality",
+        "description": "Patent classification systems mediate the relationship between search terms and final patent set quality",
+        "evidence": "The first step of the HKC is to pre-search using a set of keywords to begin the process of finding the most representative patent classes, which is defined in the following section"
+      },
+      {
+        "paper": "A hybrid mapping of information science",
+        "domain": "General",
+        "path": "V29_knowledge_spillover → V11_knowledge_recombination → V13_rd_efficiency",
+        "description": "数据整合质量中介了文本信息和引文信息对聚类效果的影响",
+        "evidence": "The combination of the two techniques helps to improve the reliability of relationship and therefore of the clustering algorithm as well"
+      },
+      {
+        "paper": "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+        "domain": "Biotech",
+        "path": "V03_rd_investment → V11_knowledge_recombination → V17_tech_breakthrough",
+        "description": "技术投入通过知识重组促进技术突破",
+        "evidence": "To address these limitations, our laboratory has invented a second-generation ICON (US patent application), named L-ICON1 for lighter ICON"
+      },
+      {
+        "paper": "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+        "domain": "Biotech",
+        "path": "V05_university_collab → V14_tech_breadth → V19_commercial_value",
+        "description": "产学研合作通过技术广度提升商业价值",
+        "evidence": "If efficacy and safety are proven in current and future clinical trials, TF-targeting immunoconjugates may provide novel therapeutic approaches with potential to broadly impact the treatment regimen"
+      },
+      {
+        "paper": "A hybrid method to trace technology evolution pathways: a case study of 3D printing",
+        "domain": "General",
+        "path": "V03_rd_investment → V09_tech_diversity → V16_tech_impact",
+        "description": "技术多样性中介研发投资对技术影响力的影响",
+        "evidence": "polymeric materials are paid plenty of attention in the past few years, which can be detected from the higher frequency terms, including polycarbonate, polyamide, polypropylene"
+      },
+      {
+        "paper": "A hierarchically sampling global sparse transformer in data stream mining for lightweight image restoration",
+        "domain": "ICT",
+        "path": "V01_tech_intensity → V13_rd_efficiency → V16_tech_impact",
+        "description": "技术投入强度通过研发效率影响技术影响力",
+        "evidence": "The streamlined structural design shows satisfactory results while enabling a significant reduction in training time and computational cost"
+      },
+      {
+        "paper": "A hierarchically sampling global sparse transformer in data stream mining for lightweight image restoration",
+        "domain": "ICT",
+        "path": "V11_knowledge_recombination → V30_tech_novelty → V16_tech_impact",
+        "description": "知识重组通过技术新颖度影响技术影响力",
+        "evidence": "A stochastic sampler suitable for global sparse attention is presented... thereby obtaining generalized priors and relieving the global computational burden"
+      },
+      {
+        "paper": "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry",
+        "domain": "Biotech",
+        "path": "V06_prior_experience → V11_knowledge_recombination → V16_tech_impact",
+        "description": "知识重组中介先验经验对技术影响力的作用",
+        "evidence": "The capability to recombine pieces of knowledge available in the organization or transferable from the outside becomes an important lever in the technological innovation strategy of the firm"
+      },
+      {
+        "paper": "A method for identifying hot patents and linking them to government-funded scientific research",
+        "domain": "General",
+        "path": "V07_policy_support → V10_science_linkage → V16_tech_impact",
+        "description": "政府资助通过科学研究质量的提升，间接影响专利的技术影响力",
+        "evidence": "This research revealed that government funding of science forms an important foundation for high-impact, hot technologies through the citation linkage between patents and government-funded scientific papers."
+      },
+      {
+        "paper": "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis",
+        "domain": "Biotech",
+        "path": "V11_knowledge_recombination → V10_science_linkage → V16_tech_impact",
+        "description": "本体论知识结构中介了专利分析与技术趋势预测的关系",
+        "evidence": "The ontology based patent analysis and clinical meta-analysis is developed to analyze and assess viable medical technology innovations and trends"
+      },
+      {
+        "paper": "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis",
+        "domain": "Biotech",
+        "path": "V01_tech_intensity → unmapped_clinical_validation → V19_commercial_value",
+        "description": "临床试验验证中介了专利技术与商业价值实现的关系",
+        "evidence": "Patent documents contain technical details of the innovations and inventions. In order to better understand the performance of new medical technologies and gain approval from regulatory agencies, reports of updated clinical trials on human subjects are also collectively analyzed"
+      },
+      {
+        "paper": "A hybrid similarity measure method for patent portfolio analysis",
+        "domain": "General",
+        "path": "V09_tech_diversity → 相似性度量精度 → V16_tech_impact",
+        "description": "技术分类方法通过提升相似性度量精度，中介影响技术影响力评估",
+        "evidence": "the categorical similarity model emphasizes international patent classification (IPCs), while the semantic similarity model emphasizes textual elements... A weighting model is designed to consider the bias that exists between the categorical and semantic similarities"
+      },
+      {
+        "paper": "A hybrid similarity measure method for patent portfolio analysis",
+        "domain": "General",
+        "path": "V27_tacit_knowledge → 树结构方法 → V16_tech_impact",
+        "description": "隐性知识通过树结构显性化，中介提升技术相似性识别能力",
+        "evidence": "the tree structure provided a way to effectively retrieve and identify the most significant concepts of patent portfolios, which could be core technologies or the technological components of related companies"
+      },
+      {
+        "paper": "A Methodology of Partner Selection for Sustainable Industry-University Cooperation Based on LDA Topic Model",
+        "domain": "General",
+        "path": "V09_tech_diversity → unmapped_partner_matching_complexity → V05_university_collab",
+        "description": "技术多样性通过增加合作伙伴匹配复杂性，影响产学合作的成功",
+        "evidence": "Even though we carry out a patent analysis from a target domain, the researchers' expertise and competence differ according to sub-fields in the domain. The existing method of partner selection has difficulty in reflecting the differences in research direction and competence among partner candidates at a sub-category level."
+      },
+      {
+        "paper": "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis",
+        "domain": "General",
+        "path": "V11_knowledge_recombination → semantic structures → V30_tech_novelty",
+        "description": "语义专利分析通过功能结构识别中介新颖性测量",
+        "evidence": "SAO-structures represent the functional relationship of an invention and thus represent the functional aspects of the invention. SAO-structures are expected to be a high-quality representation of patents' technological contents"
+      },
+      {
+        "paper": "A New Approach for Measuring the Value of Patents Based on Structural Indicators for Ego Patent Citation Networks",
+        "domain": "General",
+        "path": "network_structure → V15_tech_depth → V16_tech_impact",
+        "description": "网络结构指标通过多维特征影响技术价值",
+        "evidence": "The technological value of a patent can be reflected by a series of multidimensional structural features of the patent's citation network"
+      },
+      {
+        "paper": "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering",
+        "domain": "General",
+        "path": "V03_rd_investment → unmapped_patent_family → V16_tech_impact",
+        "description": "专利族构建通过筛选关键专利，中介研发投入对创新绩效的影响",
+        "evidence": "Patent families created by using INPADOC can help to deploy the corporative patent strategy as well as to explore the most representative and competing patents"
+      },
+      {
+        "paper": "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering",
+        "domain": "General",
+        "path": "unmapped_patent_information → unmapped_triz_analysis → V17_tech_breakthrough",
+        "description": "TRIZ理论通过技术绩效映射，中介专利信息对技术突破的作用",
+        "evidence": "TRIZ is helpful to produce technology performance maps, provide complete product design information and offer an innovative solution to the engineering conflicts"
+      },
+      {
+        "paper": "A New Method for Analysing Downloaded Data for Strategic Decision",
+        "domain": "General",
+        "path": "unmapped_data_analysis_method → V11_knowledge_recombination → V16_tech_impact",
+        "description": "知识重组度中介数据分析方法对技术影响力的作用",
+        "evidence": "To overcome the drawbacks of pairing analysis, many authors build up matrices and analyze the result with classical data analysis methods, which provide metric solutions... Strategic information is a part of information for IHDS (Interactive Helps for Decision Systems)."
+      },
+      {
+        "paper": "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis",
+        "domain": "Clean Energy",
+        "path": "V03_rd_investment → V11_knowledge_recombination → V28_tech_convergence",
+        "description": "知识重组在R&D投资与技术融合之间起中介作用",
+        "evidence": "By adopting unsupervised learning approaches for literature and patent mining, this research develops a novel technology e-discovery methodology...The CPC trend shows development is gradually turning to thermal-PV hybrids technologies"
+      },
+      {
+        "paper": "A novel method of IP R&D using patent analysis and expert survey",
+        "domain": "ICT",
+        "path": "V04_international_collab → V11_knowledge_recombination → V16_tech_impact",
+        "description": "专利分析通过知识重组提高技术预测准确性",
+        "evidence": "we propose a patent analysis approach that improves the performance of ESTF...patent clustering and IPC code analysis"
+      },
+      {
+        "paper": "A novel method of IP R&D using patent analysis and expert survey",
+        "domain": "ICT",
+        "path": "V09_tech_diversity → V28_tech_convergence → V30_tech_novelty",
+        "description": "技术多样性通过融合效应提升技术新颖度",
+        "evidence": "technologies have been developed based on a fusion of diverse technologies (IPC codes)"
+      },
+      {
+        "paper": "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity → V12_tech_cycle_time → V20_market_share",
+        "description": "技术成熟度通过影响技术发展阶段来影响市场表现",
+        "evidence": "Through the analysis by the logistic model, the BIPV technology is transformed from the emerging stage to the growth stage of a long-term life cycle"
+      },
+      {
+        "paper": "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry",
+        "domain": "Clean Energy",
+        "path": "V28_tech_convergence → V30_tech_novelty → V16_tech_impact",
+        "description": "技术融合通过提升技术新颖度来增强技术影响力",
+        "evidence": "BIPV is a new concept of converting solar energy into electrical energy... building-integrated photovoltaic (BIPV) is an emerging technology involving the photovoltaic and building fields"
+      },
+      {
+        "paper": "A novel approach to forecast promising technology through patent analysis",
+        "domain": "General",
+        "path": "unmapped_patent_clustering → unmapped_cpc_classification → V09_tech_diversity",
+        "description": "专利聚类技术通过CPC分类作为中介，影响技术多样性识别",
+        "evidence": "we clustered patent documents on the basis of the cooperative patent classification (CPC), which represents a more detailed technology classification system than the international patent classification (IPC)"
+      },
+      {
+        "paper": "A novel three-dimension perspective to explore technology evolution",
+        "domain": "Materials",
+        "path": "V03_rd_investment → V11_knowledge_recombination → V17_tech_breakthrough",
+        "description": "知识重组能力中介研发投资对技术突破性的影响",
+        "evidence": "improving the ideality degree by continuously addressing technical or physical contradictions is the basic driving force of technology evolution"
+      },
+      {
+        "paper": "A patent analysis method to trace technology evolutionary pathways",
+        "domain": "Clean Energy",
+        "path": "V03_rd_investment → V09_tech_diversity → V16_tech_impact",
+        "description": "技术多样化中介研发投入对技术影响力的作用",
+        "evidence": "the research scope for DSSCs diversified extensively. Such diversification of classifications among DSSCs patents implies a high degree of specialization in component technology development"
+      },
+      {
+        "paper": "A patent analysis of cluster analysis",
+        "domain": "General",
+        "path": "massive_data_sets → V01_tech_intensity → V16_tech_impact",
+        "description": "数据量增长通过聚类分析技术需求提升中介作用于技术影响力",
+        "evidence": "It is also a reflection of the utility of CA for simplifying massive data sets, which seem to be on the rise."
+      },
+      {
+        "paper": "A patent analysis of cluster analysis",
+        "domain": "General",
+        "path": "V01_tech_intensity → patent_protection → V19_commercial_value",
+        "description": "专利保护机制中介技术创新向商业价值的转化",
+        "evidence": "Patents may correlate with concentration areas of corporations and reveal types of expertise that are integral to them... at least among the eight, the one for a music recommendation system provides the backbone of a commercial enterprise"
+      },
+      {
+        "paper": "A novelty detection patent mining approach for analyzing technological opportunities",
+        "domain": "General",
+        "path": "原始专利文档 → LSA语义分析 → ABOD新颖性检测 → 异常专利识别",
+        "description": "LSA通过降维和语义分析中介了原始专利文档与新颖性检测之间的关系",
+        "evidence": "This research applies the ABOD method to identify outlier patents from the collected patent documents in a high-dimensional data space after LSA transformation"
+      },
+      {
+        "paper": "A novelty detection patent mining approach for analyzing technological opportunities",
+        "domain": "General",
+        "path": "V30_tech_novelty → 用户效用映射 → V19_commercial_value",
+        "description": "用户效用图中介了识别出的异常专利与市场需求之间的联系",
+        "evidence": "The user utility map is developed to visualize user benefits that each outlier patent can deliver in a situation focus to bridge the technology to market"
+      },
+      {
+        "paper": "A Patent Analysis for Sustainable Technology Management",
+        "domain": "General",
+        "path": "V15_tech_depth/V09_tech_diversity → [device/unit/terminal] → V16_tech_impact",
+        "description": "技术深度和技术多样性通过中介技术要素影响最终的技术影响力",
+        "evidence": "device, unit, and terminal directly affected telematics. Other keywords indirectly influenced telematics via device, unit, and terminal"
+      },
+      {
+        "paper": "A Patent Analysis for Sustainable Technology Management",
+        "domain": "General",
+        "path": "V14_tech_breadth → [network/receiving/service] → [device/unit/terminal] → V16_tech_impact",
+        "description": "基础技术要素通过核心技术组件间接影响技术影响力",
+        "evidence": "receiving technology affects terminal technology by a connecting strength of 0.133, and terminal technology influences telematics by 0.422"
+      },
+      {
+        "paper": "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems",
+        "domain": "General",
+        "path": "V01_tech_intensity → unmapped_sensing_capability → V16_tech_impact",
+        "description": "传感技术发展通过提升数据获取能力中介了技术投入对PHM影响力的作用",
+        "evidence": "With the rapid development of sensing and communication technologies since 2002... Data-driven techniques will find more applications because data acquisition systems and smart meters are installed"
+      },
+      {
+        "paper": "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness",
+        "domain": "Clean Energy",
+        "path": "V03_rd_investment → V09_tech_diversity → V16_tech_impact",
+        "description": "研发投资通过技术多样性影响技术影响力",
+        "evidence": "Chinese patents focus more on hydrogen production rather than on its application... exhibiting bigger array of production methods"
+      },
+      {
+        "paper": "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase",
+        "domain": "Clean Energy",
+        "path": "V24_firm_type → V09_tech_diversity → V30_tech_novelty",
+        "description": "技术多样性中介企业类型对技术新颖度的影响",
+        "evidence": "three types of companies are most vigorous in patenting... The latter being represented may reflect the high commercial expectations for solution processable or printed (organic) electronics"
+      },
+      {
+        "paper": "A patent portfolio-based approach for assessing potential R&D partners: An application of the Shapley value",
+        "domain": "General",
+        "path": "Partner Characteristics → Resource Fit (complementarity + similarity) → Cooperation Success",
+        "description": "Resource complementarity and similarity mediate the relationship between partner characteristics and cooperation success",
+        "evidence": "the resource fit between R&D partners has been highlighted as a main motive to cooperate and a crucial factor to create synergy from the cooperation"
+      },
+      {
+        "paper": "A patent portfolio-based approach for assessing potential R&D partners: An application of the Shapley value",
+        "domain": "General",
+        "path": "Individual Capabilities → Shapley Value → Portfolio Contribution",
+        "description": "Shapley value mediates the relationship between individual partner capabilities and their contribution to integrated portfolio value",
+        "evidence": "the application of the Shapley value can present a useful and convenient instrument for evaluating the importance of each participant in creating the value of an integrated patent portfolio"
+      },
+      {
+        "paper": "A patent quality classification model based on an artificial immune system",
+        "domain": "General",
+        "path": "patent_citations → V16_tech_impact → V19_commercial_value",
+        "description": "专利引用通过技术重要性中介影响经济价值",
+        "evidence": "the citations of patents can be used to estimate their technological quality, influence and importance... the greater number of counts of patents cited, the greater the economic worth of the patents"
+      },
+      {
+        "paper": "A patent quality analysis and classification system using self-organizing maps with support vector machine",
+        "domain": "Clean Energy",
+        "path": "patent_characteristics → KPCA_features → classification_performance",
+        "description": "专利文档特征通过KPCA非线性特征提取中介影响专利质量分类性能",
+        "evidence": "The KPCA approach is used to transform nonlinear feature space in order to improve classification performance"
+      },
+      {
+        "paper": "A patent quality analysis and classification system using self-organizing maps with support vector machine",
+        "domain": "Clean Energy",
+        "path": "quality_indicators → SOM_clustering → quality_type_definition",
+        "description": "SOM聚类分析中介专利质量指标与质量类型定义的关系",
+        "evidence": "The SOM approach is used to cluster patents published before into different quality groups according to the patent quality indicators and defines group quality type instead of via experts"
+      },
+      {
+        "paper": "A new method for extracting knowledge from patents to inspire designers during the problem-solving phase",
+        "domain": "General",
+        "path": "V06_prior_experience → V11_knowledge_recombination → V16_tech_impact",
+        "description": "功能分解方法通过物理现象识别中介技术影响力",
+        "evidence": "We propose an energy based functional decomposition...A better physical analysis of concepts found in patents will increase the number of search keywords and improve their relevance."
+      },
+      {
+        "paper": "A new method for extracting knowledge from patents to inspire designers during the problem-solving phase",
+        "domain": "General",
+        "path": "V14_tech_breadth → unmapped_discovery_matrix → V17_tech_breakthrough",
+        "description": "发现矩阵通过识别空白领域中介创新机会",
+        "evidence": "The discovery matrix enables users to classify the relevant patents and through the empty cells they can seek the first evolution opportunities."
+      },
+      {
+        "paper": "A patent time series processing component for technology intelligence by trend identification functionality",
+        "domain": "ICT",
+        "path": "专利数据 → 时间序列处理组件 → 趋势识别 → 技术策略支持",
+        "description": "时间序列处理组件作为中介，连接原始专利数据与技术策略制定",
+        "evidence": "The time series processing component... enriches the existing framework of technology intelligence with trend identification functionality... provides decision makers with comprehensive awareness of technological advances"
+      },
+      {
+        "paper": "A patent review on strategies for biological control of mosquito vector",
+        "domain": "Biotech",
+        "path": "V01_tech_intensity → V11_knowledge_recombination → V17_tech_breakthrough",
+        "description": "技术投入通过知识重组促进技术突破",
+        "evidence": "Patents disclosing GM agents for mosquito control were further classified according to the use of a single GM microbial species or multiple agents or GM mosquitoes or GM plants."
+      },
+      {
+        "paper": "A patent review on strategies for biological control of mosquito vector",
+        "domain": "Biotech",
+        "path": "V05_university_collab → V11_knowledge_recombination → V16_tech_impact",
+        "description": "产学研合作通过知识重组提升技术影响力",
+        "evidence": "Academic institutes have filed higher number of patent applications as compared to private companies. University of Florida was found to be the leading patent filing entity and its patents were focused on suppression of vector population using techniques such as release of insects with dominant lethal (RIDL) and RNA interference (RNAi)."
+      },
+      {
+        "paper": "A patent-based approach for the identification of technology-based service opportunities",
+        "domain": "General",
+        "path": "V09_tech_diversity → patent co-classification analysis → V19_commercial_value",
+        "description": "专利共分类分析中介了技术多样性对商业价值的影响",
+        "evidence": "co-classification analysis is applied to construct interrelationship matrices based on the patent co-classification system to calculate the importance and its increase rate of technology-based services"
+      },
+      {
+        "paper": "A patent-based approach for the identification of technology-based service opportunities",
+        "domain": "General",
+        "path": "V04_international_collab → V29_knowledge_spillover → V28_tech_convergence",
+        "description": "知识溢出中介了国际合作对技术融合的影响",
+        "evidence": "patent co-classification analysis has several advantages over citation analysis...it is possible to grasp the interrelationship between technological fields at an upper level"
+      },
+      {
+        "paper": "A patent-based approach to identifying potential technology opportunities realizable from a firm's internal capabilities",
+        "domain": "General",
+        "path": "V06_prior_experience → V11_knowledge_recombination → V30_tech_novelty",
+        "description": "技术主题网络在内部能力与技术机会识别间的中介作用",
+        "evidence": "A technology topic network can be built by associating topics assigned to the same patent... The apriori algorithm is applied to the extended relationships between technology topics"
+      },
+      {
+        "paper": "A patent-based approach to identifying potential technology opportunities realizable from a firm's internal capabilities",
+        "domain": "General",
+        "path": "V11_knowledge_recombination → unmapped_link_prediction → V30_tech_novelty",
+        "description": "链路预测通过发现潜在连接实现面向未来的技术机会识别",
+        "evidence": "The four common local measures are used together to predict candidates for new links to prevent a loss of information... to provide a future-oriented perspective to topic network dynamics"
+      },
+      {
+        "paper": "A patent-based cross impact analysis for quantitative estimation of technological impact: The case of information and communication technology",
+        "domain": "ICT",
+        "path": "V03_rd_investment → V09_tech_diversity → V16_tech_impact",
+        "description": "多重专利分类通过技术交叉影响中介研发投资对技术影响力的作用",
+        "evidence": "The technology classification of patents, especially the multiple classifications of patents, can be used to evaluate the relationship or impact between technologies"
+      },
+      {
+        "paper": "A patent-based cross impact analysis for quantitative estimation of technological impact: The case of information and communication technology",
+        "domain": "ICT",
+        "path": "V01_tech_intensity → V11_knowledge_recombination → V28_tech_convergence → V16_tech_impact",
+        "description": "知识重组通过技术融合中介技术投入对技术影响力的作用",
+        "evidence": "The relationship between technologies changes according to the development of these technologies...because the growth and development of one technology tend to affect the other technology"
+      }
+    ],
+    "moderation_effects": [
+      {
+        "paper": "3GPP URLLC patent analysis",
+        "domain": "ICT",
+        "path": "V22_tech_maturity调节V01_tech_intensity→V16_tech_impact",
+        "description": "技术成熟度调节投入强度对技术影响力的作用",
+        "evidence": "Currently in 2020 NR Phase2 standard has tried to expand URLLC technology to vertical service field"
+      },
+      {
+        "paper": "A novel bibliometric-based technique to identify emerging photovoltaic technologies in a comparative assessment with expert review",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity 调节 unmapped_keyword_frequency → V16_tech_impact",
+        "description": "技术成熟度调节关键词频率与技术影响力的关系",
+        "evidence": "Even if we searched for 'emerging' technologies, at higher TRLs technologies tend to have more consolidated jargon. Keywords designating more mature technologies tend to appear more often"
+      },
+      {
+        "paper": "A clustering-based approach for the evaluation of candidate emerging technologies",
+        "domain": "General",
+        "path": "V22_tech_maturity moderates patent_indicators → emerging_technology_identification",
+        "description": "技术成熟度调节专利指标对新兴技术识别的效果",
+        "evidence": "The A61C patent class was related to apparatus or methods for oral or dental hygiene... represents sub-categories of dental implant technology that may can be considered as candidate emerging technologies"
+      },
+      {
+        "paper": "A comparative study of patent counts by the inventor country and the assignee country",
+        "domain": "General",
+        "path": "V22_tech_maturity调节inventor_country→assignee_country",
+        "description": "国家发展水平调节发明者国家与受让者国家专利计数的关系",
+        "evidence": "When countries had similar patent counts by inventor country with patent counts by assignee country, all the countries allocated along the diagonal line in the quadrant diagram were developed countries"
+      },
+      {
+        "paper": "A comparative study of patent counts by the inventor country and the assignee country",
+        "domain": "General",
+        "path": "counting_method调节patent_statistics→V16_tech_impact",
+        "description": "计数方法调节专利统计结果的准确性",
+        "evidence": "patent counts be analysed using both the inventor country and the assignee country at the same time if meaningful implications from patent statistics are to be obtained"
+      },
+      {
+        "paper": "'Green chasm' in clean-tech for air pollution: Patent evidence of a long innovation cycle and a technological level gap",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity调节V06_prior_experience→V26_catching_up",
+        "description": "技术成熟度调节先发优势对后发追赶的影响",
+        "evidence": "At the same time T, when the latecomer's TIS is a formative phase in its own country, the forerunner's TIS in developing countries is expanding... The mature phase is characterized by high sales and low growth rates; thus, the forerunner's TIS become very stable"
+      },
+      {
+        "paper": "A collaborative desktop tagging system for group knowledge management based on concept space",
+        "domain": "ICT",
+        "path": "unmapped_document_similarity调节unmapped_tagging_behavior→unmapped_tag_recommendation_quality",
+        "description": "文档间相似度调节标签推荐效果",
+        "evidence": "The inter-similarity of a collection of documents also affected the adoption rate. The average adoption rate grew more steadily after collections of documents with low inter-similarity were removed."
+      },
+      {
+        "paper": "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies",
+        "domain": "General",
+        "path": "V24_firm_type调节V03_rd_investment→V16_tech_impact",
+        "description": "组织类型调节研发投资对技术影响力的作用效果",
+        "evidence": "Therefore, our approach focuses specifically on government organizations with a large number of R&D projects (N100 projects) and a large technological scope (N20 technologies)... Companies normally do not have a large number of internal R&D projects or they are limited to a small number of technologies"
+      },
+      {
+        "paper": "A compared R&D-based and patent-based cross impact analysis for identifying relationships between technologies",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V29_knowledge_spillover→V26_catching_up",
+        "description": "技术成熟度调节知识溢出对技术追赶的影响",
+        "evidence": "Together with expert knowledge (e.g. the fact that R&D in chemical oxygen iodine lasers probably does not increase value because it might be old-fashioned concerning fibre lasers), an advise can be given to decrease these R&D activities"
+      },
+      {
+        "paper": "Scientometric and patentometric analyses to determine the knowledge landscape in innovative technologies: The case of 3D bioprinting",
+        "domain": "Biotech",
+        "path": "V22_tech_maturity moderates V03_rd_investment → V19_commercial_value",
+        "description": "技术成熟度调节研发投入对商业价值的影响",
+        "evidence": "3D bioprinting is still in an early stage... only a small number of applications have been granted thus far"
+      },
+      {
+        "paper": "A framework for assessing innovation collaboration partners and its application to BRICs",
+        "domain": "General",
+        "path": "V23_industry_type调节V04_international_collab→V16_tech_impact",
+        "description": "技术领域类型调节国际合作对技术影响力的作用效果",
+        "evidence": "Indian and Russian patents are dominated by only few technological classes, Brazilian and particularly Chinese patents exhibit a large diversity of technologies"
+      },
+      {
+        "paper": "A framework for assessing innovation collaboration partners and its application to BRICs",
+        "domain": "General",
+        "path": "V25_geographic_location调节V04_international_collab→V16_tech_impact",
+        "description": "地理位置调节创新合作伙伴的选择和效果",
+        "evidence": "there are three main criteria that determine the choice of location and partner: The first criterion is the access to the resources that, in most cases, are non-transferable and location-specific"
+      },
+      {
+        "paper": "A deep learning based method for extracting semantic information from patent documents",
+        "domain": "General",
+        "path": "V02_firm_size调节V01_tech_intensity→V13_rd_efficiency",
+        "description": "数据规模调节深度学习技术对研发效率的影响",
+        "evidence": "the performance of entity identification performance in term of F1 score is positively correlated to support degree... one can improve the entity identification performance by promoting corresponding support degree"
+      },
+      {
+        "paper": "A fact-oriented ontological approach to SAO-based function modeling of patents for implementing Function-based Technology Database",
+        "domain": "General",
+        "path": "V22_tech_maturity moderates V11_knowledge_recombination → V17_tech_breakthrough",
+        "description": "技术成熟度调节功能抽象与创新突破性的关系",
+        "evidence": "Each patent document has specific function information, which can be represented using an SAO structure... These relationships can support function generalization and remove the semantic confusion problem"
+      },
+      {
+        "paper": "A dynamic framework for analyzing technology standardisation using network analysis and game theory",
+        "domain": "ICT",
+        "path": "V22_tech_maturity moderates V29_knowledge_spillover → V20_market_share",
+        "description": "技术成熟度调节网络效应对标准化成功的影响",
+        "evidence": "HD-DVD was derived from existing DVD technology... However, Blu-ray achieved faster growth in the following years and narrowed the gap"
+      },
+      {
+        "paper": "A framework for technology assessment: Case of a Thai building material manufacturer",
+        "domain": "Materials",
+        "path": "V23_industry_type modulates V03_rd_investment → V16_tech_impact",
+        "description": "产业类型调节技术投资对技术影响力的效应",
+        "evidence": "The specific problem in this case is the acquisition of green technologies... Through analysis, it was concluded that the best broad target for the technology addition was within the roof tile product line."
+      },
+      {
+        "paper": "A framework for inventor collaboration recommendation system based on network approach",
+        "domain": "General",
+        "path": "V14_tech_breadth调节V05_university_collab→V16_tech_impact",
+        "description": "技术领域耦合调节合作关系对创新绩效的影响强度",
+        "evidence": "how strongly a pair of inventors are coupled through common technological fields...Therefore, such recommendations can be given high priority"
+      },
+      {
+        "paper": "A comprehensive review on green buildings research: bibliometric analysis during 1998–2018",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity moderates V07_policy_support → V16_tech_impact",
+        "description": "技术成熟度调节政策支持对绿色建筑发展的影响",
+        "evidence": "most of the technologies of energy-saving buildings were on the fast-growing trend, and even though there were conflicts and doubts in different countries on GB adoption, it is still a promising field"
+      },
+      {
+        "paper": "A hybrid keyword and patent class methodology for selecting relevant sets of patents for a technological field",
+        "domain": "General",
+        "path": "V22_tech_maturity moderates unmapped_search_method → unmapped_patent_set_quality",
+        "description": "Technology maturity moderates the effectiveness of different search methods",
+        "evidence": "The results show that the HKC method does not always simultaneously produce the highest relevancy percentage and the highest estimated completeness, but it consistently performs well for both characteristics"
+      },
+      {
+        "paper": "A hybrid mapping of information science",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V11_knowledge_recombination→V16_tech_impact",
+        "description": "技术成熟度调节了混合方法相对于单一方法的优势程度",
+        "evidence": "The two smaller classes represent relatively new and emerging topics in IS, namely, Patent analysis and Webometrics... whereas three large traditional sub-disciplines can be distinguished"
+      },
+      {
+        "paper": "Therapeutic Antibody-Like Immunoconjugates against Tissue Factor with the Potential to Treat Angiogenesis-Dependent as Well as Macrophage-Associated Human Diseases",
+        "domain": "Biotech",
+        "path": "V22_tech_maturity moderates V03_rd_investment → V16_tech_impact",
+        "description": "技术成熟度调节研发投入对技术影响力的作用",
+        "evidence": "Some TF-targeting agents, such as ICON and therapeutic ADCs, are being evaluated in early clinical trials, while newer and improved ICONs are being evaluated in preclinical studies with potential to translate into clinical trials"
+      },
+      {
+        "paper": "A hybrid method to trace technology evolution pathways: a case study of 3D printing",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V03_rd_investment→V16_tech_impact",
+        "description": "技术成熟度调节研发投资对技术影响力的效应",
+        "evidence": "In the early stage of technology development, a few powerful patentees play a vital role. Over the course of technology development, the market grows, competition grows fierce"
+      },
+      {
+        "paper": "A hybrid method to trace technology evolution pathways: a case study of 3D printing",
+        "domain": "General",
+        "path": "V24_firm_type调节V04_international_collab→V16_tech_impact",
+        "description": "企业类型调节国际合作对技术影响力的效应",
+        "evidence": "Chinese assignees focus more on the domestic market. On the contrary, the assignees who come from the Taiwan region stand out for their multiple family country patents"
+      },
+      {
+        "paper": "A hierarchically sampling global sparse transformer in data stream mining for lightweight image restoration",
+        "domain": "ICT",
+        "path": "unmapped_sampling_strategy 调节 unmapped_sparse_attention → V16_tech_impact",
+        "description": "采样策略调节稀疏注意力对技术影响力的效果",
+        "evidence": "our proposed method outperforms other combinations in terms of generalization and detail recovery"
+      },
+      {
+        "paper": "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry",
+        "domain": "Biotech",
+        "path": "V22_tech_maturity调节V06_prior_experience→V16_tech_impact",
+        "description": "技术成熟度调节搜索策略与创新绩效的关系",
+        "evidence": "firms in the higher complexity segments of the market are able to balance distant search and local search strategies through an efficient recombination and integration of external and internal knowledge components"
+      },
+      {
+        "paper": "A method based on patent analysis for the investigation of technological innovation strategies: The European medical prostheses industry",
+        "domain": "Biotech",
+        "path": "V23_industry_type调节V11_knowledge_recombination→V16_tech_impact",
+        "description": "产业类型调节搜索策略的有效性",
+        "evidence": "the capability to recombine and integrate pieces of knowledge belonging to different knowledge domains is primarily critical in some industrial sectors"
+      },
+      {
+        "paper": "A method for identifying hot patents and linking them to government-funded scientific research",
+        "domain": "General",
+        "path": "V23_industry_type调节V07_policy_support→V16_tech_impact",
+        "description": "技术领域类型调节政府资助对技术影响力的效果",
+        "evidence": "The geographical breadth of influence shows how different regions and technology clusters benefit differently from DOE-funded science, with 39 states having at least one hot patent linked to DOE-funded science."
+      },
+      {
+        "paper": "A method for identifying hot patents and linking them to government-funded scientific research",
+        "domain": "General",
+        "path": "V25_geographic_location调节V07_policy_support→V16_tech_impact",
+        "description": "地理位置调节政府资助科学研究对技术影响力的作用效果",
+        "evidence": "212 of the 435 US congressional districts had a hot patent linked to DOE science... dominated by California congressional districts. Ten out of the sixteen districts in this table are in California."
+      },
+      {
+        "paper": "A knowledge centric methodology for dental implant technology assessment using ontology based patent analysis and clinical meta-analysis",
+        "domain": "Biotech",
+        "path": "V22_tech_maturity调节V01_tech_intensity→V20_market_share",
+        "description": "技术成熟度调节了技术投入与市场成功的关系",
+        "evidence": "The patent statistics indicate that the external and internal connection techniques are relatively mature technologies when compared to platform switch techniques"
+      },
+      {
+        "paper": "A hybrid similarity measure method for patent portfolio analysis",
+        "domain": "General",
+        "path": "V22_tech_maturity调节方法效果",
+        "description": "技术成熟度调节相似性度量方法的有效性",
+        "evidence": "Data scope is one of the most important issues to influence the efficiency of both models. Generally, both show better performance on data with a relatively wide scope and low-coupled sub-domains, like multidisciplinary studies, than on data with a narrow scope with high-coupled sub-domains, like a particular technological area"
+      },
+      {
+        "paper": "A hybrid similarity measure method for patent portfolio analysis",
+        "domain": "General",
+        "path": "V24_firm_type和V02_firm_size调节相似性→商业价值",
+        "description": "组织类型和规模调节技术相似性的实际意义",
+        "evidence": "Group A contains 15 firms (1 billion RMB to +∞). Group B contains 56 firms (1 million RMB to 1 billion RMB). Group C contains 638 firms (0 to 1 million RMB)... it is easier to seek the technological similarities between large firms than small ones"
+      },
+      {
+        "paper": "A Methodology of Partner Selection for Sustainable Industry-University Cooperation Based on LDA Topic Model",
+        "domain": "General",
+        "path": "V22_tech_maturity moderates unmapped_partner_selection_quality → V05_university_collab",
+        "description": "技术成熟度调节合作伙伴选择方法对产学合作效果的影响",
+        "evidence": "the researchers' expertise and competence differ according to sub-fields in the domain"
+      },
+      {
+        "paper": "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis",
+        "domain": "General",
+        "path": "V23_industry_type moderates measurement effectiveness → V30_tech_novelty",
+        "description": "技术领域调节新颖性测量方法的有效性",
+        "evidence": "the exploration of our method has so far been limited to the field of mechanical engineering. This area appears suitable for semantic patent analysis, as the wording tends to be simpler as well as more standardized than in other technological fields"
+      },
+      {
+        "paper": "A new instrument for technology monitoring: novelty in patents measured by semantic patent analysis",
+        "domain": "General",
+        "path": "V22_tech_maturity moderates V30_tech_novelty measurement accuracy",
+        "description": "技术成熟度调节新颖性识别的准确性",
+        "evidence": "TechB performs well, if there is a swift from one technological domain to another technological domain. In contrast, semantic patent analysis obviously outperforms TechB in comparing patents from identical technological domains"
+      },
+      {
+        "paper": "A New Approach for Measuring the Value of Patents Based on Structural Indicators for Ego Patent Citation Networks",
+        "domain": "General",
+        "path": "V22_tech_maturity调节network_density→V16_tech_impact",
+        "description": "技术密度调节专利网络结构对技术价值的影响",
+        "evidence": "if a patent holds a high relative position in a strong and dense technological value network, then it is much more powerful, i.e., is more innovative and has a larger profit-earning ability than when it holds a similar position in a weaker technological value network"
+      },
+      {
+        "paper": "A New Comprehensive Patent Analysis Approach for New Product Design in Mechanical Engineering",
+        "domain": "General",
+        "path": "V22_tech_maturity调节unmapped_patent_analysis_approach → V13_rd_efficiency",
+        "description": "技术成熟度调节专利分析方法对研发效率的影响强度",
+        "evidence": "The results of patent value assessment may be different due to the differences between the characteristics of technology and industry on various NPD cases"
+      },
+      {
+        "paper": "A New Method for Analysing Downloaded Data for Strategic Decision",
+        "domain": "General",
+        "path": "V22_tech_maturity调节unmapped_data_analysis_method→V13_rd_efficiency",
+        "description": "技术成熟度调节数据分析方法对研发效率的影响",
+        "evidence": "The method we use could be applied to a large number of patents (> 1000)... Classification analysis: are techniques that classify either rows or columns of a matrix using an aggregation criterion over a computed distance."
+      },
+      {
+        "paper": "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity 调节 V03_rd_investment → V16_tech_impact",
+        "description": "技术成熟度调节R&D投资对技术影响力的效应",
+        "evidence": "As technology matures and the product life cycle enters the growth stage, there is a fast, increasing demand for equipment and services"
+      },
+      {
+        "paper": "A Machine Learning Approach for Solar Power Technology Review and Patent Evolution Analysis",
+        "domain": "Clean Energy",
+        "path": "V25_geographic_location 调节 V07_policy_support → V16_tech_impact",
+        "description": "地理位置调节政策支持对技术影响力的效应",
+        "evidence": "Countries, such as the United States, Germany and China, have significant technological R&D and manufacturing capabilities...China owns the most patents in this domain"
+      },
+      {
+        "paper": "A novel method of IP R&D using patent analysis and expert survey",
+        "domain": "ICT",
+        "path": "V22_tech_maturity调节patent_analysis→V16_tech_impact",
+        "description": "技术成熟度调节专利分析的预测效果",
+        "evidence": "The technologies with the highest frequencies are then determined to be our final technologies for TF"
+      },
+      {
+        "paper": "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry",
+        "domain": "Clean Energy",
+        "path": "V23_industry_type调节V03_rd_investment→V19_commercial_value",
+        "description": "产业类型调节技术投资与商业价值的关系",
+        "evidence": "BIPV's technology industry chain can be divided into four flows, including solar cells, photovoltaic modules, building structure, and electromechanical system"
+      },
+      {
+        "paper": "A Novel Method for Technology Forecasting and Developing R&D Strategy of Building Integrated Photovoltaic Technology Industry",
+        "domain": "Clean Energy",
+        "path": "V25_geographic_location调节V07_policy_support→V20_market_share",
+        "description": "地理位置调节政策支持对市场份额的影响",
+        "evidence": "Results show that countries most focused on R&D of BIPV technology are the United States, Japan, and Germany"
+      },
+      {
+        "paper": "A novel approach to forecast promising technology through patent analysis",
+        "domain": "General",
+        "path": "V22_tech_maturity moderates patent_indicators → V26_catching_up",
+        "description": "技术成熟度调节专利指标对技术追赶能力的预测效果",
+        "evidence": "data management technology and business system technology have less clear technological concepts... than telemedicine technology, that there has been relatively less vigorous patent activities in these areas"
+      },
+      {
+        "paper": "A novel three-dimension perspective to explore technology evolution",
+        "domain": "Materials",
+        "path": "V22_tech_maturity调节V03_rd_investment→V16_tech_impact",
+        "description": "技术成熟度调节研发投资对技术影响力的作用",
+        "evidence": "During the maturity period, with declining marginal revenue, it is probable that the market is monopolized by large companies"
+      },
+      {
+        "paper": "A novel three-dimension perspective to explore technology evolution",
+        "domain": "Materials",
+        "path": "V23_industry_type调节V05_university_collab→V16_tech_impact",
+        "description": "产业类型调节产学研合作对技术影响力的作用效果",
+        "evidence": "In Asia, including Korea, Japan and China, graphene patents usually refer to electronics, perhaps because of the enormous demand for electronics in that region. However, electronics are the primary lower-value applications of graphene."
+      },
+      {
+        "paper": "A patent analysis method to trace technology evolutionary pathways",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity moderates V03_rd_investment → V19_commercial_value",
+        "description": "技术成熟度调节研发投入对商业化的影响",
+        "evidence": "DSSCs are currently in the growth stage... This implies that organizations perceive potential commercial value in DSSCs technology"
+      },
+      {
+        "paper": "A patent analysis method to trace technology evolutionary pathways",
+        "domain": "Clean Energy",
+        "path": "V25_geographic_location moderates V04_international_collab → V19_commercial_value",
+        "description": "地理位置调节国际合作对商业价值的影响",
+        "evidence": "We found that the leading countries were different for each period... From 1994 to 1998, the number of patents was low, and they concentrated in Europe. From 2001 to 2004, the number of patents increased rapidly. Japan led this trend"
+      },
+      {
+        "paper": "A patent analysis of cluster analysis",
+        "domain": "General",
+        "path": "V23_industry_type调节V01_tech_intensity→V19_commercial_value",
+        "description": "行业类型调节聚类分析技术对商业价值的影响效果",
+        "evidence": "Some sectors rely heavily on patents, and others very little or not at all. Grubb [5] describes their importance to chemistry, pharmaceuticals, and biotechnology, relative even to engineering or electronics."
+      },
+      {
+        "paper": "A novelty detection patent mining approach for analyzing technological opportunities",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V30_tech_novelty→技术机会",
+        "description": "技术成熟度调节了新颖专利对技术机会识别的影响",
+        "evidence": "The telehealth industry is used as an illustrative example, because of its rising global market value and the need for systematic opportunity analysis in this emerging field"
+      },
+      {
+        "paper": "A Patent Analysis for Sustainable Technology Management",
+        "domain": "General",
+        "path": "V22_tech_maturity调节技术发展路径→可持续技术管理效果",
+        "description": "技术成熟度调节不同技术路径对可持续技术管理效果的影响",
+        "evidence": "sustainable technology is a technology keeping the technological superiority of a company and management of sustainable technology is very important"
+      },
+      {
+        "paper": "A Patent Analysis of Prognostics and Health Management (PHM) Innovations for Electrical Systems",
+        "domain": "General",
+        "path": "V23_industry_type调节技术发展→应用效果",
+        "description": "应用领域类型调节了PHM技术发展的效果",
+        "evidence": "PHM patents for semiconductor components, computers, and their accessories... account for more than 60% of all PHM patents for electrical systems. Additionally, PHM patents for batteries represent a less than 10% share"
+      },
+      {
+        "paper": "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness",
+        "domain": "Clean Energy",
+        "path": "V24_firm_type调节V04_international_collab→V16_tech_impact",
+        "description": "组织类型调节国际合作对技术影响力的效应",
+        "evidence": "whilst U.S. patent holders showed a higher tendency to apply for patent rights in other countries... patent rights were requested by private companies"
+      },
+      {
+        "paper": "A patent analysis on advanced biohydrogen technology development and commercialisation: Scope and competitiveness",
+        "domain": "Clean Energy",
+        "path": "V25_geographic_location调节V01_tech_intensity→V14_tech_breadth",
+        "description": "地理位置调节技术投入对技术广度的影响",
+        "evidence": "Japan is the biggest patent contributor, in terms of methods aiming rear-end product application... China is the biggest patent contributor worldwide in terms of hydrogen production methods"
+      },
+      {
+        "paper": "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase",
+        "domain": "Clean Energy",
+        "path": "V22_tech_maturity调节V03_rd_investment→V16_tech_impact",
+        "description": "技术成熟度调节研发投资对技术影响力的作用",
+        "evidence": "OPV will remain in this phase as long as no critical mass is gathered around a dominant design or in scientific terms around the constitution of an OPV solar cell"
+      },
+      {
+        "paper": "A patent landscape analysis for organic photovoltaic solar cells: Identifying the technology's development phase",
+        "domain": "Clean Energy",
+        "path": "V25_geographic_location调节V04_international_collab→V16_tech_impact",
+        "description": "地理位置调节国际合作对技术影响力的作用效果",
+        "evidence": "Asia 48%, North-America 19%, Europe 15%... The higher in this leader board, the more their development matches with the exponential distribution curve over time"
+      },
+      {
+        "paper": "A patent portfolio-based approach for assessing potential R&D partners: An application of the Shapley value",
+        "domain": "General",
+        "path": "Prior Knowledge moderates Resource Complementarity → Knowledge Absorption",
+        "description": "Prior related knowledge moderates the relationship between resource complementarity and knowledge absorption",
+        "evidence": "the ability to incorporate external knowledge largely depends on the prior related knowledge (Cohen & Levinthal, 1990)"
+      },
+      {
+        "paper": "A patent quality classification model based on an artificial immune system",
+        "domain": "General",
+        "path": "V23_industry_type调节patent_citations→V19_commercial_value",
+        "description": "专利所在技术领域调节引用对价值的影响",
+        "evidence": "patent analysis can be used for comparison of industrial positions internationally and finding the leading countries in different fields of technology"
+      },
+      {
+        "paper": "A patent quality analysis and classification system using self-organizing maps with support vector machine",
+        "domain": "Clean Energy",
+        "path": "technology_field moderates quality_indicators → patent_value",
+        "description": "技术领域类型调节专利质量指标与专利价值的关系强度",
+        "evidence": "References to the non-patent literature are informative about the value of pharmaceutical and chemical patents, but not in other technical fields"
+      },
+      {
+        "paper": "A new method for extracting knowledge from patents to inspire designers during the problem-solving phase",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V11_knowledge_recombination→V17_tech_breakthrough",
+        "description": "技术演化趋势调节专利分析对创新的影响",
+        "evidence": "The analysis of patents in timeline through the evolution trends inspires users with some innovative solutions...We seek to analyze, classify, and define the evolutions that the pertinent classified patents will follow."
+      },
+      {
+        "paper": "A patent time series processing component for technology intelligence by trend identification functionality",
+        "domain": "ICT",
+        "path": "技术领域类型调节专利时间序列→技术影响力",
+        "description": "技术领域类型调节专利时间序列模式对技术影响力的预测效果",
+        "evidence": "A case study using Australia patents (year 1983–2012) in Information and Communications Technology industry is presented to demonstrate the feasibility of the component"
+      },
+      {
+        "paper": "A patent review on strategies for biological control of mosquito vector",
+        "domain": "Biotech",
+        "path": "V22_tech_maturity moderates V03_rd_investment → V09_tech_diversity",
+        "description": "技术成熟度调节研发投入对技术多样性的影响",
+        "evidence": "The use of toxic peptides from microbes and consortia represented the earliest technology right from 1965 and has till date sustained a lead over other technologies in terms of the number of patent filings."
+      },
+      {
+        "paper": "A patent-based approach for the identification of technology-based service opportunities",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V11_knowledge_recombination→V30_tech_novelty",
+        "description": "技术成熟度调节知识重组对技术新颖度的影响",
+        "evidence": "Since changes in the environment surrounding technology-based services are relatively more dynamic than traditional services, opportunities that are not promising can be attractive in the near future"
+      },
+      {
+        "paper": "A patent-based approach to identifying potential technology opportunities realizable from a firm's internal capabilities",
+        "domain": "General",
+        "path": "V22_tech_maturity调节V06_prior_experience→V30_tech_novelty",
+        "description": "技术成熟度调节内部能力对技术机会识别的效果",
+        "evidence": "It is unlikely that all technology topics resulting from a firm's internal capabilities will become practical opportunities. Whether they are emerging, growing, maturing, or declining must be examined."
+      },
+      {
+        "paper": "A patent-based cross impact analysis for quantitative estimation of technological impact: The case of information and communication technology",
+        "domain": "ICT",
+        "path": "V22_tech_maturity调节技术影响关系",
+        "description": "技术成熟度调节技术间影响关系的强度",
+        "evidence": "The cross impact between technologies is never stable, that is, it always changes over time due to the changes in customer needs and the advent of new technologies"
+      }
+    ]
+  },
+  "extraction_statistics": {
+    "total_papers_processed": 50,
+    "successful_extractions": 50,
+    "total_relations_extracted": 258,
+    "total_complex_relations": 138,
+    "processing_date": "2026-01-15 16:30:00"
+  }
+}
