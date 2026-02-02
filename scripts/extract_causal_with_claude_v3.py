@@ -446,9 +446,15 @@ def main():
     
     extractor = ClaudePDFExtractorV3()
     
-    # 获取PDF文件列表（前50篇）
-    pdf_folder = Path("downloads")
-    pdf_files = sorted(pdf_folder.glob("*.pdf"))[:50]
+    # 获取PDF文件列表
+    # 优先查找根目录的PDF
+    pdf_files = list(Path(".").glob("*.pdf"))
+    
+    # 如果根目录没有，再查找downloads文件夹
+    if not pdf_files:
+        pdf_folder = Path("downloads")
+        if pdf_folder.exists():
+            pdf_files = sorted(pdf_folder.glob("*.pdf"))[:50]
     
     print(f"\n找到 {len(pdf_files)} 个PDF文件")
     
@@ -477,7 +483,8 @@ def main():
     print("=" * 60)
     print(f"成功: {success_count}/{len(results)}")
     print(f"总耗时: {total_time:.1f}秒 ({total_time/60:.1f}分钟)")
-    print(f"平均每篇: {total_time/len(results):.1f}秒")
+    if results:
+        print(f"平均每篇: {total_time/len(results):.1f}秒")
     
     # 构建因果图谱
     print("\n" + "=" * 60)

@@ -6,3 +6,4 @@ langchain>=0.1.0
 langchain-openai>=0.0.5
 langchain-community>=0.0.20
 neo4j>=5.14.0
+openai>=1.0.0
