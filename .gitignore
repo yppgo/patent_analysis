@@ -80,3 +80,6 @@ _archive/
 !config/*.json
 !sandbox/static/data/*.json
 !src/graphs/data/**/*.json
+
+# PDF files directory (too large for git)
+dowland/
