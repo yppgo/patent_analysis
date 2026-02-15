@@ -15,6 +15,7 @@ import pandas as pd
 from typing import Dict, Any, List, Set, Tuple, Optional
 from src.agents.base_agent import BaseAgent
 from src.utils.data_preview import DataPreview
+from src.utils.graph_preview import GraphPreview
 
 
 class StrategistAgent(BaseAgent):
@@ -243,30 +244,251 @@ class StrategistAgent(BaseAgent):
         lines.append("")
         
         return "\n".join(lines)
-    
+
+    # ─── 数据洞察生成（Phase 2 新增）────────────────────────
+
+    def _generate_data_insights(
+        self,
+        data_preview_text: str,
+        graph_preview_text: Optional[str],
+        abstracts_text: Optional[str],
+        user_goal: str,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        调用 LLM 基于三份输入生成 5-8 条数据洞察。
+        """
+        prompt = f"""你是一位资深的专利数据分析师。以下是一份专利数据集的统计特征、图结构分析和领域摘要样本。
+请基于这些信息，围绕用户的研究目标生成 5-8 条**数据洞察**。
+
+**用户研究目标：** {user_goal}
+
+---
+
+**【数据统计特征】**
+{data_preview_text}
+
+{f'**【图结构分析】**{chr(10)}{graph_preview_text}' if graph_preview_text else ''}
+
+{f'**【领域摘要样本】**{chr(10)}{abstracts_text}' if abstracts_text else ''}
+
+---
+
+**洞察生成要求：**
+
+1. **每条洞察必须引用输入中的具体数字**（如相关系数、社区数量、桥梁节点介数、分组均值差异等）
+2. **每条洞察必须指定**：用哪些数据列、什么分析方法来深入验证
+3. **洞察分三类**：
+   - `statistical`：基于相关系数、分组对比、时间趋势等统计信号
+   - `graph_structural`：基于社区结构、桥梁节点、连通分量、度分布等图特征
+   - `content_driven`：基于摘要内容发现的技术主题或趋势
+4. **禁止常识性结论**（如"越老的专利引用越多"、"大公司专利多"）
+
+**输出格式（严格 JSON）：**
+{{
+  "domain_summary": "基于摘要内容的 2-3 句技术领域描述",
+  "insights": [
+    {{
+      "id": "I1",
+      "type": "statistical | graph_structural | content_driven",
+      "title": "洞察标题",
+      "observation": "数据/图/摘要中的具体观察（必须引用具体数字）",
+      "hypothesis": "可检验的假设",
+      "data_columns": ["列名1", "列名2"],
+      "analysis_method": "建议的分析方法",
+      "novelty_reason": "为什么这不是常识"
+    }}
+  ],
+  "recommended_analyses": ["推荐的 2-3 种深入分析方向"]
+}}
+
+只输出 JSON，不要其他文字。"""
+
+        try:
+            response = self.llm.invoke(prompt)
+            content = response.content if hasattr(response, 'content') else str(response)
+
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+
+            insights = json.loads(content)
+            n = len(insights.get('insights', []))
+            self.log(f"✓ 生成 {n} 条数据洞察")
+            return insights
+
+        except Exception as e:
+            self.log(f"⚠️ 数据洞察生成失败: {e}", "warning")
+            return None
+
+    def _format_data_insights_for_prompt(self, insights: Dict[str, Any]) -> str:
+        """格式化数据洞察为 Prompt 可注入文本。"""
+        if not insights:
+            return ""
+
+        lines = ["**【数据驱动的研究洞察】**", ""]
+        if insights.get('domain_summary'):
+            lines.append(f"领域概述: {insights['domain_summary']}")
+            lines.append("")
+
+        for ins in insights.get('insights', []):
+            lines.append(f"**{ins['id']}. {ins['title']}** [{ins.get('type', '')}]")
+            lines.append(f"  观察: {ins['observation']}")
+            lines.append(f"  假设: {ins['hypothesis']}")
+            lines.append(f"  数据列: {ins['data_columns']}")
+            lines.append(f"  建议方法: {ins['analysis_method']}")
+            lines.append("")
+
+        rec = insights.get('recommended_analyses', [])
+        if rec:
+            lines.append(f"推荐分析方向: {', '.join(rec)}")
+            lines.append("")
+
+        lines.append("**⚠️ 重要：请基于上述洞察设计分析任务，优先选择有具体数据支撑的洞察。**")
+        return "\n".join(lines)
+
+    def _generate_refined_blueprint(
+        self,
+        user_goal: str,
+        previous_results: List[Dict],
+        data_insights: Optional[Dict],
+        available_columns: List[str],
+        data_preview_text: Optional[str],
+        graph_preview_text: Optional[str],
+        graph_context: str = "",
+    ) -> Dict[str, Any]:
+        """
+        第二轮专用：基于第一轮结果生成深入分析方案。
+        """
+        columns_semantic = self._describe_columns_semantics(available_columns)
+        insights_section = self._format_data_insights_for_prompt(data_insights) if data_insights else ""
+
+        # 格式化第一轮结果
+        results_lines = []
+        for r in previous_results:
+            results_lines.append(f"任务 {r.get('task_id', '?')}: {r.get('question', '')}")
+            results_lines.append(f"  状态: {r.get('status', 'unknown')}")
+            if r.get('key_findings'):
+                results_lines.append(f"  发现: {r['key_findings']}")
+            results_lines.append("")
+        formatted_results = "\n".join(results_lines)
+
+        prompt = f"""你是专利分析领域的资深研究员。你已经完成了第一轮探索性分析，现在需要设计更深入的第二轮分析。
+
+**用户研究目标:** {user_goal}
+
+**【第一轮分析结果】**
+{formatted_results}
+
+{insights_section}
+
+**当前数据可用列名及语义:**
+{columns_semantic}
+
+**数据预览:**
+{data_preview_text or "（未提供）"}
+
+{f'**图结构预览:**{chr(10)}{graph_preview_text}' if graph_preview_text else ''}
+
+---
+
+请基于第一轮发现，设计更深入的第二轮分析：
+1. 第一轮发现了什么有意思的信号？哪些值得深挖？
+2. 第一轮没覆盖到但洞察中提到的分析，是否需要补充？
+3. 对第一轮的初步结论，如何加入控制变量、交互效应或非线性检验来增强？
+
+设计 2-3 个深入分析任务。
+
+**⚠️ 关键约束：**
+1. 列名必须完全匹配【实际列名】
+2. 数据源路径: data/new_data.XLSX, sheet: sheet1
+3. 输出结论性数据（JSON 汇总优先）
+
+**输出格式（严格 JSON）：**
+{{
+  "thinking_trace": {{
+    "round1_assessment": "第一轮结果评估：哪些发现有价值，哪些需要深入",
+    "gap_analysis": "第一轮的分析空白",
+    "deepening_strategy": "深入策略：控制变量/交互效应/非线性检验"
+  }},
+  "research_objective": "第二轮研究目标",
+  "expected_outcomes": ["预期成果1", "预期成果2"],
+  "task_graph": [
+    {{
+      "task_id": "task_r2_1",
+      "task_type": "分析类型",
+      "question": "本步骤要回答的问题",
+      "input_variables": [],
+      "output_variables": ["result"],
+      "dependencies": [],
+      "description": "步骤说明",
+      "implementation_config": {{
+        "data_source": "data/new_data.XLSX",
+        "sheet_name": "sheet1",
+        "columns_to_load": ["列名"],
+        "parameters": {{}},
+        "output_format": "json",
+        "output_file": "outputs/task_r2_1_result.json",
+        "output_content": {{
+          "key_findings": "关键发现"
+        }}
+      }}
+    }}
+  ]
+}}
+
+只输出 JSON，不要其他文字。"""
+
+        try:
+            response = self.llm.invoke(prompt)
+            content = response.content if hasattr(response, 'content') else str(response)
+
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+
+            blueprint = json.loads(content)
+            return blueprint
+        except Exception as e:
+            self.log(f"第二轮蓝图生成失败: {e}", "error")
+            return {'error': str(e), 'research_objective': user_goal, 'task_graph': []}
+
     def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         处理用户目标，生成 DAG 战略蓝图
-        
+
         Args:
             input_data: {
                 "user_goal": str,
-                "available_columns": List[str] (可选，如果不提供则自动从数据文件读取),
-                "use_dag": bool (可选，是否使用 DAG 模式，默认 False 保持向后兼容)
+                "available_columns": List[str] (可选),
+                "use_dag": bool (可选，默认 False),
+                "round": int (可选，默认 1，用于两轮迭代),
+                "previous_results": List[Dict] (可选，第一轮结果摘要),
+                "disable_data_insights": bool (可选，禁用数据洞察生成，用于基线实验)
             }
-            
+
         Returns:
             {
-                "blueprint": dict,  # 包含 task_graph (DAG) 或 analysis_logic_chains (List)
-                "graph_context": str,
-                "hypotheses": dict (可选，如果有因果图谱)
+                "blueprint": dict,
+                "method_context": str,
+                "data_preview": str,
+                "data_insights": dict (如果生成了),
+                "graph_preview": str (如果生成了),
+                "hypotheses": dict (如果有因果图谱)
             }
         """
         user_goal = input_data.get('user_goal', '')
         available_columns = input_data.get('available_columns', None)
-        use_dag = input_data.get('use_dag', False)  # 默认 False，保持向后兼容
+        use_dag = input_data.get('use_dag', False)
+        round_num = input_data.get('round', 1)
+        previous_results = input_data.get('previous_results', None)
+        disable_data_insights = input_data.get('disable_data_insights', False)
+        disable_causal_hypotheses = input_data.get('disable_causal_hypotheses', False)
 
-        # 允许外部覆盖数据源（用于测试/不同数据集）
+        # 允许外部覆盖数据源
         data_file = input_data.get('data_file')
         sheet_name = input_data.get('sheet_name')
         if data_file:
@@ -274,33 +496,56 @@ class StrategistAgent(BaseAgent):
         if sheet_name:
             self.sheet_name = sheet_name
 
-        # 生成数据预览（统计 + 关键列样例）供 LLM 参考
+        # ─── 生成 DataPreview ───────────────────────────────
         data_preview_text: Optional[str] = None
+        abstracts_text: Optional[str] = None
+        data_preview_obj: Optional[DataPreview] = None
         try:
-            data_preview_text = DataPreview.from_file(self.data_file, self.sheet_name).to_prompt_string()
+            data_preview_obj = DataPreview.from_file(self.data_file, self.sheet_name)
+            data_preview_text = data_preview_obj.to_prompt_string()
+            abstracts_text = data_preview_obj.get_abstracts_prompt_string()
         except Exception as e:
             self.log(f"⚠️ DataPreview 生成失败: {e}", "warning")
-        
+
+        # ─── 生成 GraphPreview ──────────────────────────────
+        graph_preview_text: Optional[str] = None
+        if not disable_data_insights and data_preview_obj is not None:
+            try:
+                gp = GraphPreview(data_preview_obj.df).build_all()
+                graph_preview_text = gp.to_prompt_string()
+                self.log(f"✓ GraphPreview: 构建了 {len(gp.graphs)} 个图")
+            except Exception as e:
+                self.log(f"⚠️ GraphPreview 生成失败: {e}", "warning")
+
+        # ─── 生成数据洞察 ───────────────────────────────────
+        data_insights: Optional[Dict] = None
+        if not disable_data_insights and data_preview_text:
+            self.log("生成数据洞察...")
+            data_insights = self._generate_data_insights(
+                data_preview_text, graph_preview_text, abstracts_text, user_goal
+            )
+
         # 如果没有提供列名，尝试从数据文件读取
         if available_columns is None:
             self.log("未提供列名，尝试从数据文件读取...")
             available_columns = self._load_real_columns()
-        
+
         self.log(f"[V5.0] 开始处理用户目标: {user_goal}")
-        self.log(f"模式: {'DAG' if use_dag else 'Legacy (List)'}")
+        self.log(f"模式: {'DAG' if use_dag else 'Legacy (List)'}, 轮次: {round_num}")
         if available_columns:
             self.log(f"可用列名: {available_columns}")
-        else:
-            self.log("未获取到列名，将使用默认假设", "warning")
-        
+
         # 步骤 1: 意图转译 - 提取检索关键词
         keywords = self._extract_keywords(user_goal)
         self.log(f"提取的关键词: {keywords}")
-        
-        # 新增：步骤 1.5 - 因果图谱假设生成（如果有因果图谱）
+
+        # 步骤 1.5: 因果图谱假设生成（如果有因果图谱且未禁用）
         hypothesis_result = None
         recommended_hypotheses = None
-        if self.causal_graph:
+        if disable_causal_hypotheses:
+            # Baseline0 模式：跳过因果图谱和方法图谱，纯 LLM 生成
+            self.log("Baseline0 模式：跳过因果图谱假设生成")
+        elif self.causal_graph and not disable_data_insights:
             self.log("检测到因果图谱，开始生成研究假设...")
             hypothesis_result = self._generate_hypotheses_from_causal_graph(user_goal, keywords)
             if hypothesis_result:
@@ -308,71 +553,85 @@ class StrategistAgent(BaseAgent):
                 self.log(f"生成 {recommended_hypotheses.get('total_count', 0)} 个假设，"
                         f"核心推荐 {recommended_hypotheses.get('core_count', 0)} 个")
                 recommended_hypotheses = self._select_top_core_hypothesis(recommended_hypotheses)
-                if recommended_hypotheses and recommended_hypotheses.get('core_recommendations'):
-                    top_statement = recommended_hypotheses['core_recommendations'][0]['hypothesis'].get('statement', '')
-                    self.log(f"仅保留评分最高的核心假设用于验证: {top_statement}")
-        
-        # 步骤 2: 方法图谱检索（如果有方法图谱）
+        elif disable_data_insights and self.causal_graph:
+            # 基线模式A：仅用因果图谱
+            self.log("基线模式：仅使用因果图谱假设...")
+            hypothesis_result = self._generate_hypotheses_from_causal_graph(user_goal, keywords)
+            if hypothesis_result:
+                recommended_hypotheses = hypothesis_result.get('step6_recommendation', {})
+                recommended_hypotheses = self._select_top_core_hypothesis(recommended_hypotheses)
+
+        # 步骤 2: 方法图谱检索
         method_context = ""
         if self.method_graph and recommended_hypotheses:
             self.log("从方法图谱检索相关方法...")
             method_context = self._retrieve_methods_for_hypotheses(recommended_hypotheses)
-        elif not self.method_graph:
-            self.log("未加载方法图谱，跳过方法检索", "warning")
-        
-        # 步骤 3: 根据模式生成蓝图
+
+        # 步骤 3: 根据模式和轮次生成蓝图
         if use_dag:
-            # V5.0 DAG 模式（集成假设和方法）
-            blueprint = self._generate_with_dag_mode(
-                user_goal, 
-                method_context, 
-                available_columns,
-                recommended_hypotheses=recommended_hypotheses,
-                data_preview_text=data_preview_text
-            )
+            if round_num == 2 and previous_results:
+                # 第二轮：基于第一轮结果生成深入方案
+                self.log("第二轮迭代：基于第一轮结果生成深入方案")
+                blueprint = self._generate_refined_blueprint(
+                    user_goal, previous_results, data_insights,
+                    available_columns, data_preview_text, graph_preview_text,
+                    graph_context=method_context,
+                )
+            else:
+                # 第一轮或默认：使用 DAG 模式
+                blueprint = self._generate_with_dag_mode(
+                    user_goal, method_context, available_columns,
+                    recommended_hypotheses=recommended_hypotheses,
+                    data_preview_text=data_preview_text,
+                    data_insights=data_insights,
+                    graph_preview_text=graph_preview_text,
+                )
         else:
-            # Legacy 模式（保持向后兼容）
             blueprint = self._generate_with_legacy_mode(user_goal, method_context, available_columns)
-        
-        self.log(f"[V5.0] 战略蓝图生成完成 (模式: {'DAG' if use_dag else 'Legacy'})")
-        
+
+        self.log(f"[V5.0] 战略蓝图生成完成 (模式: {'DAG' if use_dag else 'Legacy'}, 轮次: {round_num})")
+
         result = {
             'blueprint': blueprint,
-            'method_context': method_context,  # 改为 method_context
-            'data_preview': data_preview_text
+            'method_context': method_context,
+            'data_preview': data_preview_text,
         }
-        
-        # 如果生成了假设，添加到返回结果中
+
+        if data_insights:
+            result['data_insights'] = data_insights
+        if graph_preview_text:
+            result['graph_preview'] = graph_preview_text
         if hypothesis_result:
             result['hypotheses'] = hypothesis_result
-        
+
         return result
     
     def _generate_with_dag_mode(
-        self, 
-        user_goal: str, 
-        graph_context: str, 
+        self,
+        user_goal: str,
+        graph_context: str,
         available_columns: List[str] = None,
         recommended_hypotheses: Dict = None,
-        data_preview_text: Optional[str] = None
+        data_preview_text: Optional[str] = None,
+        data_insights: Optional[Dict] = None,
+        graph_preview_text: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        V5.0 DAG 模式：生成基于 DAG 的蓝图（集成假设）
-        
-        Args:
-            recommended_hypotheses: 因果图谱推荐的假设（可选）
+        V5.0 DAG 模式：生成基于 DAG 的蓝图（集成假设 + 数据洞察）
         """
         max_retries = 3
         blueprint = None
-        
+
         for attempt in range(max_retries):
             self.log(f"生成 DAG 蓝图 (尝试 {attempt + 1}/{max_retries})")
             blueprint = self._generate_dag_blueprint(
-                user_goal, 
-                graph_context, 
+                user_goal,
+                graph_context,
                 available_columns=available_columns,
                 recommended_hypotheses=recommended_hypotheses,
                 data_preview_text=data_preview_text,
+                data_insights=data_insights,
+                graph_preview_text=graph_preview_text,
                 retry=attempt > 0
             )
             
@@ -521,24 +780,33 @@ class StrategistAgent(BaseAgent):
             '公开(公告)日': '公开日期（时间维度，可用于时间序列分析）',
             '授权日': '授权日期（时间维度，可用于时间序列分析）',
             '申请日': '申请日期（时间维度，可用于时间序列分析）',
+            '标题(译)(简体中文)': '专利标题（文本维度，可用于文本分析）',
+            '摘要(译)(简体中文)': '专利摘要（文本维度，可用于文本分析、主题建模）',
             '名称': '专利标题（文本维度，可用于文本分析）',
             '摘要': '专利摘要（文本维度，可用于文本分析、主题建模）',
             '申请(专利权)人': '申请人/权利人（实体维度，可用于申请人分布、协作网络分析）',
-            'IPC分类号': '国际专利分类号（技术维度，可用于技术分类、聚类、跨领域分析）',
+            '当前申请(专利权)人': '当前申请人/权利人（实体维度，可用于申请人分布分析）',
+            '原始申请(专利权)人': '原始申请人（实体维度）',
+            '[标]当前申请(专利权)人': '标准化当前申请人（实体维度，已标准化）',
+            '[标]原始申请(专利权)人': '标准化原始申请人（实体维度，已标准化）',
+            'IPC分类号': '国际专利分类号（技术维度，多值分隔符 |，可用于技术分类、聚类、共现网络）',
+            'IPC主分类号': 'IPC 主分类号（技术维度，单值）',
             'CPC分类号': '合作专利分类号（技术维度，可用于技术分类）',
             '主分类号': '主分类号（技术维度）',
-            '发明人': '发明人（实体维度，可用于合作网络分析、团队规模统计）',
+            '发明人': '发明人（实体维度，多值分隔符 |，可用于合作网络分析、团队规模统计）',
+            '第一发明人': '第一发明人（实体维度，单值）',
+            '第一发明人地址': '第一发明人地址（地理维度）',
             '地址': '地址（地理维度，可用于地理分布分析）',
             '代理机构': '代理机构（实体维度）',
             '代理人': '代理人（实体维度）',
-            '法律状态': '法律状态（分类维度）',
-            '引用文献': '引用文献（关系维度，可用于引用网络分析）',
-            '被引用专利': '被引用专利（前向引文，关系维度）',
-            '被引用专利数量': '被引用次数（数值维度）',
-            '引用专利': '引用专利（后向引文，关系维度）',
+            '法律状态/事件': '法律状态（分类维度，如"授权"、"授权|权利转移"等）',
+            '被引用专利': '被引用专利列表（前向引文，多值分隔符 |，可用于引用网络分析）',
+            '被引用专利数量': '被引用次数（数值维度，反映专利影响力）',
+            '引用专利': '引用专利列表（后向引文，多值分隔符 |，可用于引用网络分析）',
             '引用专利数量': '引用次数（数值维度）',
-            '简单同族': '专利家族（关系维度，可用于国际化/扩展度分析）',
-            '优先权国家/地区': '优先权国家（地理维度，可用于地理分布分析）',
+            '简单同族': '专利家族（关系维度，多值分隔符 |，可用于国际化/扩展度分析）',
+            '简单同族编号': '同族编号（数值维度）',
+            '优先权国家/地区': '优先权国家（地理维度，可用于国家/地区分布分析）',
         }
         
         descriptions = []
@@ -558,50 +826,44 @@ class StrategistAgent(BaseAgent):
         return "\n".join(descriptions)
     
     def _generate_dag_blueprint(
-        self, 
-        user_goal: str, 
-        graph_context: str, 
-        retry: bool = False, 
+        self,
+        user_goal: str,
+        graph_context: str,
+        retry: bool = False,
         available_columns: List[str] = None,
         recommended_hypotheses: Dict = None,
-        data_preview_text: Optional[str] = None
+        data_preview_text: Optional[str] = None,
+        data_insights: Optional[Dict] = None,
+        graph_preview_text: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        生成基于 DAG 的研究战略蓝图（集成假设）
-        
-        核心改进：
-        1. 引入 thinking_trace 字段（CoT）
-        2. 使用 task_graph 替代 analysis_logic_chains
-        3. 每个任务明确 input_variables 和 output_variables
-        4. Schema Awareness：提供列名语义描述
-        5. 集成因果图谱假设：提供变量定义和测量方法
-        
-        Args:
-            user_goal: 用户研究目标
-            graph_context: 知识图谱检索结果
-            retry: 是否为重试生成
-            available_columns: 真实数据的列名列表
-            recommended_hypotheses: 因果图谱推荐的假设（可选）
-            data_preview_text: 数据预览文本（可选）
+        生成基于 DAG 的研究战略蓝图（集成数据洞察 + 假设 + 图结构）
         """
         # 格式化列名语义描述
         columns_semantic = self._describe_columns_semantics(available_columns)
-        
-        # 格式化假设信息（如果有）
+
+        # 格式化假设信息（如果有，降级为可选参考）
         hypotheses_section = self._format_hypotheses_for_prompt(recommended_hypotheses)
+
+        # 格式化数据洞察（如果有，作为主驱动）
+        insights_section = self._format_data_insights_for_prompt(data_insights) if data_insights else ""
         
         prompt = f"""你是专利分析领域的资深研究员和数据科学家。请根据用户的研究目标，设计一个**基于 DAG（有向无环图）的分析方案**。
 
 **用户研究目标:**
 {user_goal}
 
-{hypotheses_section}
+{insights_section}
+
+{hypotheses_section if hypotheses_section else "（因果图谱假设：未提供或已禁用）"}
 
 **当前数据可用列名及语义:**
 {columns_semantic}
 
-**数据预览（结构统计 + 关键列样例）:**
+**数据预览（结构统计 + 关键列样例 + 跨列统计）:**
 {data_preview_text or "（未提供数据预览）"}
+
+{f'**图结构预览（自动构建的网络分析结果）:**{chr(10)}{graph_preview_text}' if graph_preview_text else ''}
 
 **⚠️⚠️⚠️ 关键约束（必须遵守）⚠️⚠️⚠️**
 1. **列名必须完全匹配**：只能使用上面【实际列名】中列出的列名，一个字都不能改
@@ -630,7 +892,9 @@ class StrategistAgent(BaseAgent):
 
 ### 1. 思考过程（Thinking Trace）
 在生成方案前，请先进行以下思考（填入 `thinking_trace` 字段）：
+- **领域理解**: 基于摘要和数据特征，简述该技术领域的特点
 - **数据审计**: 列出可用的列名（从上面【实际列名】中复制），说明每个列的用途
+- **洞察选择**: 如果提供了数据洞察，选择 2-3 个最有价值的洞察，说明理由
 - **假设分析**: 如果提供了研究假设，分析需要计算哪些变量，需要哪些列
 - **创新性评估**: ⚠️ **关键步骤** - 评估当前方案的结论是否有洞察力：
   * 这个结论是否是"常识"（如"老专利被引用多"、"大公司专利多"）？
@@ -700,7 +964,9 @@ class StrategistAgent(BaseAgent):
 
 {{
   "thinking_trace": {{
+    "domain_understanding": "基于摘要和数据特征的领域理解",
     "data_audit": "简要列出可用列名及用途（从【实际列名】复制）",
+    "selected_insights": "选择的 2-3 个核心洞察及理由（如有数据洞察）",
     "hypothesis_analysis": "若有假设，说明如何把假设语义映射到可用列",
     "algorithm_selection": "选择方法的理由",
     "conclusion_design": "每个任务预期输出的结论"
@@ -859,257 +1125,6 @@ class StrategistAgent(BaseAgent):
                 'task_graph': []
             }
         
-        prompt = f"""你是专利分析领域的资深研究员和数据科学家。请根据用户的研究目标，设计一个**基于 DAG（有向无环图）的分析方案**。
-
-**用户研究目标:**
-{user_goal}
-
-**当前数据可用列名及语义:**
-{columns_semantic}
-
-**⚠️⚠️⚠️ 关键约束（必须遵守）⚠️⚠️⚠️**
-1. **列名必须完全匹配**：只能使用上面【实际列名】中列出的列名，一个字都不能改
-2. **禁止自创列名**：不要使用任何未在上面列出的列名（如 ID, Title, Abstract, Applicant, Grant Date 等）
-3. **直接复制列名**：从【实际列名】中直接复制粘贴，确保完全一致（包括括号、空格等）
-4. **结论导向输出**：每个任务必须输出结论性数据（汇总、统计、发现），而不是中间特征或原始数据
-
-**错误示例（禁止）:**
-- ❌ "ID" （应该使用 "序号"）
-- ❌ "Title" （应该使用 "名称"）
-- ❌ "Abstract" （应该使用 "摘要"）
-- ❌ 输出 1000 行的 topic_0, topic_1, ... 特征矩阵（应该输出主题汇总）
-
-**正确示例（必须）:**
-- ✓ "序号"
-- ✓ "名称"
-- ✓ "摘要"
-- ✓ 输出主题汇总 JSON（8 个主题，每个包含标签、关键词、专利数）
-
-**相关案例参考:**
-{graph_context if graph_context else "（无相关案例，请基于你的专业知识设计）"}
-
----
-
-## 设计要求
-
-### 1. 思考过程（Thinking Trace）
-在生成方案前，请先进行以下思考（填入 `thinking_trace` 字段）：
-- **数据审计**: 列出可用的列名（从上面【实际列名】中复制），说明每个列的用途
-- **算法选择**: 根据用户目标，选择最合适的算法
-- **结论设计**: 每个任务应该回答什么问题？输出什么结论？
-
-### 2. DAG 结构（Task Graph）
-将研究目标分解为 2-4 个任务节点，每个节点必须：
-- 回答一个明确的问题
-- 输出结论性数据（JSON 汇总 > CSV 表格 > 原始数据）
-- 包含关键发现（key_findings）
-
-任务节点结构：
-- `task_id`: 唯一标识（如 "task_1", "task_2"）
-- `task_type`: 任务类型（如 "data_summary", "topic_analysis", "trend_analysis", "hotspot_identification"）
-- `question`: 该任务要回答的问题（如 "有哪些技术主题？"）
-- `input_variables`: 输入变量列表（如 ["df_raw"]）
-- `output_variables`: 输出变量列表（如 ["topics_summary", "lda_model"]）
-- `dependencies`: 依赖的前序任务 ID 列表（如 ["task_1"]）
-- `description`: 任务描述
-- `implementation_config`: 实现配置
-
-### 3. 输出格式要求
-
-**优先级（从高到低）:**
-1. **JSON 汇总文件**（最优）
-   - 包含结论、统计、关键发现
-   - 适合报告智能体直接使用
-   - 示例：`topics_summary.json`, `trend_analysis.json`
-
-2. **CSV 汇总表格**（次优）
-   - 汇总级别的数据（如 8 个主题，不是 1000 条专利）
-   - 包含统计指标
-   - 示例：`topic_statistics.csv` (8 rows)
-
-3. **原始数据文件**（仅作为备份）
-   - 保存用于追溯，但不是主要输出
-   - 示例：`df_raw.csv` (1000 rows)
-
-### 4. 结论性输出示例
-
-**❌ 不好的输出（中间特征）:**
-```
-outputs/task_2_df_with_topics.csv (1000 rows × 10 cols)
-序号,topic_0,topic_1,topic_2,...
-1,0.05,0.10,0.60,...
-```
-
-**✓ 好的输出（结论性数据）:**
-```
-outputs/task_2_topics_summary.json
-{{
-  "n_topics": 8,
-  "topics": [
-    {{
-      "topic_id": 0,
-      "label": "数据加密技术",
-      "top_keywords": ["加密", "密钥", "算法"],
-      "patent_count": 234,
-      "percentage": 23.4,
-      "key_finding": "数据加密是最主要的技术方向"
-    }}
-  ]
-}}
-```
-
----
-
-## 输出格式（严格 JSON）
-
-{{
-  "thinking_trace": {{
-    "data_audit": "可用列名：'序号'（ID）、'名称'（标题）、'摘要'（文本）、'授权日'（时间）",
-    "algorithm_selection": "选择 LDA 进行主题建模，使用 '摘要' 列",
-    "conclusion_design": "Task 2 回答'有哪些技术主题'，输出主题汇总 JSON；Task 3 回答'哪些主题在上升'，输出趋势分析 JSON"
-  }},
-  "research_objective": "研究目标的简洁描述",
-  "expected_outcomes": ["预期成果1（结论性）", "预期成果2（结论性）"],
-  "task_graph": [
-    {{
-      "task_id": "task_1",
-      "task_type": "data_summary",
-      "question": "数据集的基本情况如何？",
-      "input_variables": [],
-      "output_variables": ["data_summary"],
-      "dependencies": [],
-      "description": "生成数据集基本统计摘要",
-      "implementation_config": {{
-        "data_source": "data/new_data.XLSX",
-        "sheet_name": "sheet1",
-        "columns_to_load": ["序号", "名称", "摘要", "申请(专利权)人", "授权日"],
-        "output_format": "json",
-        "output_file": "outputs/task_1_data_summary.json",
-        "output_content": {{
-          "total_patents": "专利总数",
-          "date_range": "时间范围",
-          "top_applicants": "前 10 申请人及专利数",
-          "yearly_distribution": "年度分布统计"
-        }},
-        "backup_file": "outputs/task_1_df_raw.csv"
-      }}
-    }},
-    {{
-      "task_id": "task_2",
-      "task_type": "topic_analysis",
-      "question": "有哪些主要的技术主题？",
-      "input_variables": ["data_summary"],
-      "output_variables": ["topics_summary", "lda_model"],
-      "dependencies": ["task_1"],
-      "description": "使用 LDA 识别技术主题并生成汇总",
-      "implementation_config": {{
-        "algorithm": "LDA",
-        "input_file": "outputs/task_1_df_raw.csv",
-        "text_column": "摘要",
-        "parameters": {{
-          "n_topics": 8,
-          "max_iter": 200
-        }},
-        "output_format": "json",
-        "output_file": "outputs/task_2_topics_summary.json",
-        "output_content": {{
-          "n_topics": "主题数量",
-          "topics": [
-            {{
-              "topic_id": "主题 ID",
-              "label": "主题标签（自动生成）",
-              "top_keywords": "前 10 关键词",
-              "patent_count": "该主题的专利数",
-              "percentage": "占比",
-              "representative_patents": "代表性专利（3-5 个）",
-              "key_finding": "关键发现"
-            }}
-          ]
-        }},
-        "model_file": "outputs/task_2_lda_model.pkl"
-      }}
-    }},
-    {{
-      "task_id": "task_3",
-      "task_type": "trend_analysis",
-      "question": "哪些技术主题在上升/下降？",
-      "input_variables": ["topics_summary"],
-      "output_variables": ["trend_analysis"],
-      "dependencies": ["task_2"],
-      "description": "分析各主题的时间趋势",
-      "implementation_config": {{
-        "input_file": "outputs/task_2_lda_model.pkl",
-        "raw_data_file": "outputs/task_1_df_raw.csv",
-        "time_column": "授权日",
-        "output_format": "json",
-        "output_file": "outputs/task_3_trend_analysis.json",
-        "output_content": {{
-          "analysis_period": "分析时间段",
-          "hot_topics": [
-            {{
-              "topic_id": "主题 ID",
-              "topic_label": "主题标签",
-              "trend": "上升/下降/稳定",
-              "growth_rate": "增长率",
-              "key_finding": "关键发现（如：2021年起专利申请量激增）",
-              "yearly_data": "年度数据（用于绘图）"
-            }}
-          ],
-          "declining_topics": "下降的主题",
-          "stable_topics": "稳定的主题"
-        }}
-      }}
-    }}
-  ]
-}}
-
-**生成前检查清单:**
-- [ ] 所有列名都在【实际列名】中
-- [ ] 每个任务都有明确的 question
-- [ ] 每个任务的输出都是结论性的（JSON 汇总 > CSV 表格）
-- [ ] output_content 描述了输出的结构和内容
-
-{"**⚠️ 重试提示**: 上次生成使用了错误的列名或输出了中间特征，请严格使用【实际列名】并输出结论性数据！" if retry else ""}
-
-只输出 JSON，不要其他文字。"""
-
-        try:
-            response = self.llm.invoke(prompt)
-            content = response.content if hasattr(response, 'content') else str(response)
-            
-            # 清理响应
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-                content = content.strip()
-            
-            blueprint = json.loads(content)
-            
-            # 验证必要字段
-            required_fields = ['research_objective', 'task_graph']
-            for field in required_fields:
-                if field not in blueprint:
-                    self.log(f"警告: 缺少必要字段 {field}", "warning")
-            
-            return blueprint
-            
-        except json.JSONDecodeError as e:
-            self.log(f"JSON 解析失败: {e}", "error")
-            return {
-                'error': f'JSON 解析失败: {e}',
-                'raw_response': content,
-                'research_objective': user_goal,
-                'task_graph': []
-            }
-        except Exception as e:
-            self.log(f"DAG 蓝图生成失败: {e}", "error")
-            return {
-                'error': str(e),
-                'research_objective': user_goal,
-                'task_graph': []
-            }
-    
     def _check_graph_integrity(
         self, 
         blueprint: Dict[str, Any], 
