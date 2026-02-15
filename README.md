@@ -1,261 +1,114 @@
-# 专利分析智能体系统
+# 专利分析多智能体系统
 
-基于双图谱架构的多智能体协作系统，用于自动化专利数据分析。
+基于双知识图谱（因果图谱 + 方法图谱）的多智能体专利分析系统，支持从研究问题到分析代码与报告的端到端自动化。
 
-## 🌟 核心特性
+## 核心能力
 
-- **双图谱驱动**：因果图谱（理论层）+ 方法图谱（方法层）提供完整的知识支持
-- **领域驱动输入**：用户只需提供领域关键词，系统自动生成研究假设和分析方案
-- **多智能体协作**：Strategist、Methodologist、Coding Agent、Reviewer四个智能体协同工作
-- **DAG任务图**：基于有向无环图的任务编排，确保数据流完整性
-- **端到端自动化**：从用户输入到研究报告的全流程自动化
+- 四 Agent 协作：`Strategist → Methodologist → CodingAgent → Reviewer`
+- DAG 任务规划：显式输入/输出变量与依赖关系校验
+- 数据感知规划：`DataPreview + GraphPreview + 数据洞察` 驱动任务设计
+- 两轮迭代分析：第一轮探索，第二轮基于结果深入分析
 
-## 📁 项目结构
+## 当前数据资产（仓库内）
 
-```
-.
+- 因果图谱：`src/graphs/data/causal/causal_ontology_extracted.json`
+  - 变量数：30
+  - 因果路径数：99
+- 方法图谱：`src/graphs/data/method/method_knowledge_base.json`
+  - 变量测量方法覆盖：28 个变量
+  - 统计分析方法：86 种
+- 主数据集：`data/new_data.XLSX`（`sheet1`）
+
+## 关键目录
+
+```text
+patent_analysis/
 ├── src/
-│   ├── agents/                    # 智能体实现
-│   │   ├── strategist.py         # 战略规划智能体
-│   │   ├── methodologist.py      # 技术架构智能体
-│   │   ├── coding_agent.py       # 代码实现智能体
-│   │   └── reviewer.py           # 报告生成智能体
-│   └── graphs/                    # 图谱模块
-│       ├── causal_graph_query.py  # 因果图谱查询器
-│       ├── method_graph_query.py  # 方法图谱查询器
-│       └── data/                  # 图谱数据
-│           ├── causal/            # 因果图谱数据
-│           └── method/            # 方法图谱数据
-│   └── utils/                     # 工具函数
-│       ├── variable_mapper.py    # 变量映射器
-│       └── neo4j_connector.py    # Neo4j连接器
-├── docs/                          # 文档
-│   ├── COMPLETE_SYSTEM_WORKFLOW.md        # 完整系统工作流程
-│   ├── GRAPH_ARCHITECTURE_DEFINITION.md   # 双图谱架构定义
-│   ├── GRAPH_USAGE_FLOWCHART.md          # 使用流程图
-│   └── USER_SCENARIO_DEFINITION.md       # 用户场景定义
-├── scripts/                       # 脚本工具
-│   └── extract_causal_with_claude_v3.py  # 因果关系抽取
-├── test_dual_graph_integration.py # 双图谱整合测试
-├── test_neo4j_simple.py          # Neo4j连接测试
-└── test_full_system_with_real_data.py  # 完整系统测试
+│   ├── agents/            # Strategist / Methodologist / CodingAgent / Reviewer
+│   ├── core/              # LangGraph 工作流与状态定义
+│   ├── graphs/            # 双图谱查询器与图谱数据
+│   ├── tools/             # REPL 与系统工具
+│   └── utils/             # DataPreview、GraphPreview、LLM 客户端等
+├── tests/                 # 端到端与组件测试
+├── scripts/               # 数据抽取/构建/报告脚本
+├── data/                  # 输入数据与历史分析产物
+├── outputs/               # 实验输出与运行结果
+└── config/requirements.txt
 ```
 
-## 🚀 快速开始
-
-### 1. 安装依赖
+## 安装
 
 ```bash
-pip install -r requirements.txt
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+# 或 Windows CMD
+.venv\Scripts\activate.bat
+
+pip install -r config/requirements.txt
 ```
 
-### 2. 配置环境变量
+## 环境变量
 
-创建 `.env` 文件：
+在项目根目录创建 `.env`：
 
 ```env
-# LLM配置（使用聚合AI代理）
-JUHENEXT_API_KEY=your_api_key
-JUHENEXT_BASE_URL=https://api.juheai.top
+# 默认（Strategist / Methodologist / Reviewer）
+LLM_PROVIDER=dashscope
+DASHSCOPE_API_KEY=your_key
+DASHSCOPE_MODEL=qwen3-max
 
-# Neo4j配置
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
+# Coding Agent 可单独配置（可选）
+CODING_LLM_PROVIDER=anthropic
+CODING_ANTHROPIC_API_KEY=your_key
+CODING_ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+# 若走代理可配：CODING_ANTHROPIC_BASE_URL
 ```
 
-### 3. 启动Neo4j数据库
+## 快速运行
 
-确保Neo4j数据库已启动并导入了方法图谱数据。
-
-### 4. 运行测试
+### 1) 单次端到端测试
 
 ```bash
-# 测试双图谱整合
-python test_dual_graph_integration.py
-
-# 测试Neo4j连接
-python test_neo4j_simple.py
-
-# 完整系统测试
-python test_full_system_with_real_data.py
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/test_full_pipeline_with_coding_v4_2.py
 ```
 
-## 🏗️ 系统架构
-
-### 双图谱架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      知识层（双图谱）                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ 因果图谱      │  │ 变量映射器    │  │ 方法图谱      │      │
-│  │ (理论层)     │  │ (实现层)     │  │ (方法层)     │      │
-│  │ 回答"为什么" │  │ 回答"如何连接"│  │ 回答"怎么做" │      │
-│  │ 30变量       │  │ 24映射       │  │ 66篇论文     │      │
-│  │ 135路径      │  │              │  │ 1023节点     │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 工作流
-
-```
-用户输入（领域关键词）
-  ↓
-Strategist Agent（战略规划）
-  - 查询因果图谱 → 生成研究假设
-  - 查询变量映射 → 确定数据字段
-  - 查询方法图谱 → 选择分析方法
-  - 生成DAG任务图
-  ↓
-Methodologist Agent（技术架构）
-  - 接收任务节点
-  - 生成技术规格（伪代码）
-  ↓
-Coding Agent（代码实现）
-  - 接收技术规格
-  - 生成可执行Python代码
-  ↓
-执行引擎
-  - 按DAG顺序执行代码
-  - 生成分析结果
-  ↓
-Reviewer Agent（报告生成）
-  - 收集分析结果
-  - 生成研究报告
-  ↓
-最终报告
-```
-
-### 核心组件
-
-#### 1. 因果图谱（Causal Ontology）
-- **数据来源**: 50篇专利分析领域学术论文
-- **数据规模**: 30个变量，135条因果路径，42条已验证
-- **核心功能**: 提供研究假设和理论支撑
-- **实现类**: `src/utils/causal_graph_query.py`
-
-#### 2. 变量映射器（Variable Mapper）
-- **映射规模**: 24个变量已映射
-- **核心功能**: 连接抽象变量和数据字段
-- **实现类**: `src/utils/variable_mapper.py`
-
-#### 3. 方法图谱（Methodology Graph）
-- **存储位置**: `src/graphs/data/method/`
-- **数据规模**: 66篇论文，1023个节点，2749个关系
-- **核心功能**: 提供具体的分析方法和参数配置
-- **实现类**: `src/graphs/method_graph_query.py`
-
-## 📊 使用示例
-
-### 示例：数据安全领域技术趋势分析
-
-```python
-# 用户输入
-user_goal = "数据安全领域的技术趋势分析"
-
-# 系统自动处理
-# 1. Strategist查询因果图谱，生成研究假设
-#    H1: 技术投入强度 → 技术影响力
-#    H2: 技术多样性 → 技术影响力
-#    H3: 技术投入 → 技术多样性 → 技术影响力
-
-# 2. Strategist查询变量映射，确定数据字段
-#    V01_tech_intensity → ["序号", "公开(公告)号"]
-#    V09_tech_diversity → ["IPC分类号"]
-
-# 3. Strategist查询方法图谱，选择分析方法
-#    - LDA主题建模
-#    - 时间序列分析
-
-# 4. Strategist生成DAG任务图
-#    Task 1: 数据摘要
-#    Task 2: 主题分析（LDA）
-#    Task 3: 趋势分析
-
-# 5. Methodologist生成技术规格
-# 6. Coding Agent生成并执行代码
-# 7. Reviewer生成研究报告
-```
-
-### 输出结果
-
-```
-outputs/
-├── task_1_data_summary.json          # 数据摘要
-├── task_2_topics_summary.json        # 主题汇总
-├── task_2_lda_model.pkl             # LDA模型
-├── task_3_trend_analysis.json       # 趋势分析
-└── data_security_tech_trend_report.md  # 研究报告
-```
-
-## 📝 文档
-
-- [完整系统工作流程](docs/COMPLETE_SYSTEM_WORKFLOW.md) - 详细的系统工作流程说明
-- [双图谱架构定义](docs/GRAPH_ARCHITECTURE_DEFINITION.md) - 因果图谱和方法图谱的架构定义
-- [使用流程图](docs/GRAPH_USAGE_FLOWCHART.md) - 双图谱的使用流程
-- [用户场景定义](docs/USER_SCENARIO_DEFINITION.md) - 典型用户场景和使用方式
-
-## 🎯 核心创新
-
-1. **双图谱协同**: 因果图谱提供理论支撑，方法图谱提供实现参考
-2. **领域驱动**: 用户只需提供领域关键词，系统自动生成假设和方案
-3. **变量映射**: 连接抽象理论变量和具体数据字段
-4. **DAG任务图**: 确保数据流完整性和任务依赖正确性
-5. **结论导向**: 每个任务输出结论性数据，便于报告生成
-
-## 🔧 开发
-
-### 运行测试
+### 2) 四方案对比实验（D/A/B/C）
 
 ```bash
-# 双图谱整合测试
-python test_dual_graph_integration.py
-
-# Neo4j连接测试
-python test_neo4j_simple.py
-
-# 完整系统测试
-python test_full_system_with_real_data.py
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/test_full_pipeline_with_coding_v4_2.py --compare
 ```
 
-### 扩展系统
+### 3) 仅运行纯 LLM 基线（D_baseline0）
 
-#### 扩展因果图谱
-1. 添加新变量 → 更新 `sandbox/static/data/causal_ontology_extracted.json`
-2. 添加新路径 → 使用 `scripts/extract_causal_with_claude_v3.py` 从新文献中抽取
-3. 验证路径 → 标记 `validated: true`
+```bash
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/test_full_pipeline_with_coding_v4_2.py --baseline0
+```
 
-#### 扩展方法图谱
-1. 添加新论文 → 导入到Neo4j数据库
-2. 添加新方法 → 创建Method节点
-3. 更新逻辑链 → 创建关系
+### 4) 实验量化评估（自动指标 + LLM-as-Judge）
 
-#### 扩展变量映射器
-1. 添加新映射 → 更新 `src/utils/variable_mapper.py` 中的 `DEFAULT_MAPPING`
-2. 添加Python代码 → 更新 `python_code` 字段
+```bash
+# 全量评估
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/evaluate_experiments.py
 
-## 📊 系统性能
+# 仅自动化指标
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/evaluate_experiments.py --auto-only
 
-| 组件 | 响应时间 | 准确率 | 覆盖率 |
-|------|---------|--------|--------|
-| 因果图谱查询 | < 1秒 | 100% | 30变量/135路径 |
-| 变量映射器 | < 1秒 | 100% | 24/30变量 |
-| 方法图谱检索 | < 2秒 | 100% | 66篇论文 |
-| Strategist Agent | 10-30秒 | 95% | - |
-| Methodologist Agent | 5-15秒 | 95% | - |
-| Coding Agent | 10-30秒 | 90% | - |
-| Reviewer Agent | 5-10秒 | 95% | - |
+# 仅 LLM 评分
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/evaluate_experiments.py --llm-only
+```
 
-## 📄 许可证
+实验结果会写入 `outputs/experiment_*.json`、`outputs/experiment_summary.json`、`outputs/evaluation_*.json`。
 
-MIT License
+## 主要文档
 
-## 👥 贡献
+- `docs/PROJECT_OVERVIEW.md`：项目整体认知
+- `docs/IMPLEMENTATION_PLAN.md`：实施计划与阶段记录
+- `docs/项目进展记录.md`：近期迭代与实验结果
+- `docs/EXPERIMENT_SUMMARY_TABLES.md`：论文可直接引用的实验总表
+- `docs/DUAL_GRAPH_V2_ARCHITECTURE.md`：双图谱 V2 架构
 
-欢迎提交Issue和Pull Request！
+## 备注
 
-## 📮 联系方式
-
-- Email: 736698755@qq.com
+- Windows 控制台建议设置 `PYTHONIOENCODING=utf-8`，避免中文/emoji 编码问题。
+- 若需要 Neo4j，仅在对应功能分支中启用，默认主流程使用本地 JSON 图谱即可运行。
