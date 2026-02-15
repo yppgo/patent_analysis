@@ -330,5 +330,321 @@ def test_full_pipeline():
     return report
 
 
+def run_single_experiment(mode: str, user_goal: str, strategist, methodologist, coding_agent, test_data):
+    """
+    运行单次实验（A/B/C 三种模式之一）
+
+    Args:
+        mode: "A_template" | "B_data_aware" | "C_iterative"
+        user_goal: 研究问题
+    """
+    print(f"\n{'='*80}")
+    print(f"实验模式: {mode} | 问题: {user_goal}")
+    print(f"{'='*80}")
+
+    data_file = "data/new_data.XLSX"
+    sheet_name = "sheet1"
+
+    def run_round(strategist_input, round_label=""):
+        """执行一轮完整的 Strategist → Methodologist → CodingAgent"""
+        print(f"\n--- {round_label} Strategist ---")
+        t0 = time.time()
+        blueprint_result = strategist.process(strategist_input)
+        t_strat = time.time() - t0
+        blueprint = blueprint_result.get('blueprint', {})
+        task_graph = blueprint.get('task_graph', [])
+        print(f"  生成 {len(task_graph)} 个任务 ({t_strat:.1f}s)")
+
+        if blueprint_result.get('data_insights'):
+            n_ins = len(blueprint_result['data_insights'].get('insights', []))
+            print(f"  数据洞察: {n_ins} 条")
+
+        # Methodologist
+        print(f"\n--- {round_label} Methodologist ---")
+        specs = []
+        for task in task_graph:
+            spec_result = methodologist.process({'task_node': task})
+            if 'error' not in spec_result.get('technical_spec', {}):
+                specs.append(spec_result)
+            else:
+                print(f"  任务 {task['task_id']} 规格生成失败")
+                specs.append(spec_result)
+
+        # CodingAgent
+        print(f"\n--- {round_label} CodingAgent ---")
+        coding_results = []
+        success_count = 0
+        for i, (task, spec_result) in enumerate(zip(task_graph, specs)):
+            if 'error' in spec_result.get('technical_spec', {}):
+                coding_results.append({'is_code_valid': False, 'error': 'spec failed'})
+                continue
+            coding_input = {
+                'execution_spec': spec_result['technical_spec'],
+                'current_step': task,
+                'test_data': test_data,
+                'previous_result': coding_results[-1] if coding_results else None
+            }
+            try:
+                result = coding_agent.process(coding_input)
+                coding_results.append(result)
+                if result.get('is_code_valid', False):
+                    success_count += 1
+                    print(f"  {task['task_id']}: OK ({result.get('iteration_count',0)} iters)")
+                else:
+                    print(f"  {task['task_id']}: FAIL")
+            except Exception as e:
+                coding_results.append({'is_code_valid': False, 'error': str(e)})
+                print(f"  {task['task_id']}: EXCEPTION {e}")
+
+        return {
+            'blueprint_result': blueprint_result,
+            'task_graph': task_graph,
+            'specs': specs,
+            'coding_results': coding_results,
+            'success_count': success_count,
+            'total_tasks': len(task_graph),
+            'strategist_time': t_strat,
+        }
+
+    if mode == "A_template":
+        # 基线：仅用因果图谱假设，不用数据洞察
+        result = run_round({
+            "user_goal": user_goal,
+            "data_file": data_file,
+            "sheet_name": sheet_name,
+            "use_dag": True,
+            "disable_data_insights": True,
+        }, round_label="[A]")
+        return {"mode": mode, "rounds": [result]}
+
+    elif mode == "B_data_aware":
+        # 改进1：数据洞察驱动（单轮）
+        result = run_round({
+            "user_goal": user_goal,
+            "data_file": data_file,
+            "sheet_name": sheet_name,
+            "use_dag": True,
+        }, round_label="[B]")
+        return {"mode": mode, "rounds": [result]}
+
+    elif mode == "C_iterative":
+        # 改进2：两轮迭代
+        r1 = run_round({
+            "user_goal": user_goal,
+            "data_file": data_file,
+            "sheet_name": sheet_name,
+            "use_dag": True,
+            "round": 1,
+        }, round_label="[C-R1]")
+
+        # 收集第一轮结果摘要
+        previous_results = []
+        for task, cr in zip(r1['task_graph'], r1['coding_results']):
+            previous_results.append({
+                'task_id': task['task_id'],
+                'question': task.get('question', ''),
+                'status': 'success' if cr.get('is_code_valid') else 'failed',
+                'key_findings': cr.get('execution_output', '')[:500] if cr.get('is_code_valid') else '',
+            })
+
+        r2 = run_round({
+            "user_goal": user_goal,
+            "data_file": data_file,
+            "sheet_name": sheet_name,
+            "use_dag": True,
+            "round": 2,
+            "previous_results": previous_results,
+        }, round_label="[C-R2]")
+
+        return {"mode": mode, "rounds": [r1, r2]}
+
+    elif mode == "D_baseline0":
+        # 纯 LLM 基线：不使用数据洞察，也不使用因果图谱
+        result = run_round({
+            "user_goal": user_goal,
+            "data_file": data_file,
+            "sheet_name": sheet_name,
+            "use_dag": True,
+            "disable_data_insights": True,
+            "disable_causal_hypotheses": True,
+        }, round_label="[D]")
+        return {"mode": mode, "rounds": [result]}
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+
+
+def run_comparison_experiment():
+    """运行 A/B/C/D 四方案对比实验"""
+    print("\n" + "=" * 80)
+    print("四方案对比实验")
+    print("=" * 80)
+
+    Path('outputs').mkdir(exist_ok=True)
+
+    # 初始化组件
+    llm = get_llm_client()
+    coding_llm = get_llm_client(env_prefix="CODING_")
+    causal_graph = CausalGraphQuery("src/graphs/data/causal/causal_ontology_extracted.json")
+    method_graph = MethodGraphQuery("src/graphs/data/method/method_knowledge_base.json")
+
+    strategist = StrategistAgent(
+        llm_client=llm,
+        causal_graph=causal_graph,
+        method_graph=method_graph,
+    )
+    methodologist = MethodologistAgent(llm_client=llm)
+    coding_agent = CodingAgentV4_2(llm_client=coding_llm, max_iterations=15)
+
+    test_data = load_test_data("data/new_data.XLSX", "sheet1")
+    if test_data is None:
+        print("无法加载测试数据")
+        return
+
+    # 研究问题
+    questions = [
+        "分析数据安全领域的技术影响力驱动因素",
+        "识别数据安全领域的技术融合趋势",
+        "评估不同国家/地区在数据安全领域的竞争态势",
+    ]
+
+    modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative"]
+    all_results = []
+
+    for q_idx, question in enumerate(questions, 1):
+        for mode in modes:
+            print(f"\n{'#'*80}")
+            print(f"问题 {q_idx}/{len(questions)} × 模式 {mode}")
+            print(f"{'#'*80}")
+            try:
+                exp_result = run_single_experiment(
+                    mode, question, strategist, methodologist, coding_agent, test_data
+                )
+                exp_result['question'] = question
+                all_results.append(exp_result)
+
+                # 保存每次实验结果
+                fname = f"outputs/experiment_q{q_idx}_{mode}.json"
+                with open(fname, 'w', encoding='utf-8') as f:
+                    # 简化保存（去掉大对象）
+                    save_data = {
+                        'mode': mode,
+                        'question': question,
+                        'rounds': [{
+                            'total_tasks': r['total_tasks'],
+                            'success_count': r['success_count'],
+                            'strategist_time': r['strategist_time'],
+                            'has_insights': 'data_insights' in r['blueprint_result'],
+                            'has_graph_preview': 'graph_preview' in r['blueprint_result'],
+                            'blueprint': r['blueprint_result'].get('blueprint', {}),
+                        } for r in exp_result['rounds']]
+                    }
+                    json.dump(save_data, f, ensure_ascii=False, indent=2)
+                print(f"保存: {fname}")
+            except Exception as e:
+                print(f"实验失败: {e}")
+                import traceback
+                traceback.print_exc()
+
+    # 汇总对比
+    print("\n" + "=" * 80)
+    print("实验汇总")
+    print("=" * 80)
+    print(f"{'问题':<30} {'模式':<15} {'任务数':<8} {'成功数':<8} {'成功率':<8} {'有洞察':<8}")
+    print("-" * 90)
+    for r in all_results:
+        q_short = r['question'][:28]
+        for rd in r['rounds']:
+            rate = f"{rd['success_count']/rd['total_tasks']*100:.0f}%" if rd['total_tasks'] > 0 else "N/A"
+            has_ins = "data_insights" in rd['blueprint_result']
+            print(f"{q_short:<30} {r['mode']:<15} {rd['total_tasks']:<8} {rd['success_count']:<8} {rate:<8} {str(has_ins):<8}")
+
+    # 保存汇总
+    summary_file = "outputs/experiment_summary.json"
+    with open(summary_file, 'w', encoding='utf-8') as f:
+        summary = [{
+            'question': r['question'],
+            'mode': r['mode'],
+            'rounds': [{
+                'total_tasks': rd['total_tasks'],
+                'success_count': rd['success_count'],
+            } for rd in r['rounds']]
+        } for r in all_results]
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+    print(f"\n汇总已保存: {summary_file}")
+
+
+def run_baseline0_only():
+    """仅运行 D_baseline0 的 3 组实验（不重跑已有的 A/B/C）"""
+    print("\n" + "=" * 80)
+    print("Baseline0 纯 LLM 基线实验")
+    print("=" * 80)
+
+    Path('outputs').mkdir(exist_ok=True)
+
+    llm = get_llm_client()
+    coding_llm = get_llm_client(env_prefix="CODING_")
+    causal_graph = CausalGraphQuery("src/graphs/data/causal/causal_ontology_extracted.json")
+    method_graph = MethodGraphQuery("src/graphs/data/method/method_knowledge_base.json")
+
+    strategist = StrategistAgent(
+        llm_client=llm,
+        causal_graph=causal_graph,
+        method_graph=method_graph,
+    )
+    methodologist = MethodologistAgent(llm_client=llm)
+    coding_agent = CodingAgentV4_2(llm_client=coding_llm, max_iterations=15)
+
+    test_data = load_test_data("data/new_data.XLSX", "sheet1")
+    if test_data is None:
+        print("无法加载测试数据")
+        return
+
+    questions = [
+        "分析数据安全领域的技术影响力驱动因素",
+        "识别数据安全领域的技术融合趋势",
+        "评估不同国家/地区在数据安全领域的竞争态势",
+    ]
+
+    mode = "D_baseline0"
+    for q_idx, question in enumerate(questions, 1):
+        print(f"\n{'#'*80}")
+        print(f"问题 {q_idx}/{len(questions)} × 模式 {mode}")
+        print(f"{'#'*80}")
+        try:
+            exp_result = run_single_experiment(
+                mode, question, strategist, methodologist, coding_agent, test_data
+            )
+            exp_result['question'] = question
+
+            fname = f"outputs/experiment_q{q_idx}_{mode}.json"
+            with open(fname, 'w', encoding='utf-8') as f:
+                save_data = {
+                    'mode': mode,
+                    'question': question,
+                    'rounds': [{
+                        'total_tasks': r['total_tasks'],
+                        'success_count': r['success_count'],
+                        'strategist_time': r['strategist_time'],
+                        'has_insights': 'data_insights' in r['blueprint_result'],
+                        'has_graph_preview': 'graph_preview' in r['blueprint_result'],
+                        'blueprint': r['blueprint_result'].get('blueprint', {}),
+                    } for r in exp_result['rounds']]
+                }
+                json.dump(save_data, f, ensure_ascii=False, indent=2)
+            print(f"保存: {fname}")
+        except Exception as e:
+            print(f"实验失败: {e}")
+            import traceback
+            traceback.print_exc()
+
+    print("\nBaseline0 实验完成！")
+
+
 if __name__ == "__main__":
-    test_full_pipeline()
+    if len(sys.argv) > 1 and sys.argv[1] == "--compare":
+        run_comparison_experiment()
+    elif len(sys.argv) > 1 and sys.argv[1] == "--baseline0":
+        run_baseline0_only()
+    else:
+        test_full_pipeline()
