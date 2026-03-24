@@ -1,0 +1,121 @@
+\section{方法框架}
+
+\subsection{总体思路}
+
+本文方法由三项核心机制构成，其整体框架见图~\ref{fig:framework}。这三项机制分别回答三个问题：当前数据最值得看什么、面对这些证据该如何组织分析、在首轮执行之后系统又应如何继续深化。
+
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.96\textwidth]{fig1_framework_overview.png}
+\caption{期刊稿方法总框架图}
+\label{fig:framework}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.96\textwidth]{fig2_three_mechanisms.png}
+\caption{三机制输入-状态-输出图}
+\label{fig:three-mechanisms}
+\end{figure}
+
+\subsection{Evidence Grounding}
+
+Evidence Grounding 机制在规划前运行，负责提取当前数据集中的可操作证据。其输入包括结构化字段、图结构摘要和分层抽样文本样本；其输出是可直接写入规划上下文的证据化描述，例如字段异常、时间跨度、桥接节点、社区结构和潜在可检验洞察。该机制的关键点不在于“补充更多上下文”，而在于将通用问题改写为与当前数据事实绑定的规划起点。与仅依赖自然语言问题触发推理链的做法不同\citep{wei2022chain,yao2023react}，该机制优先约束“当前数据最值得看什么”。
+
+\paragraph{输入对象}
+\texttt{question}、\texttt{dataset\_profile}、\texttt{graph\_profile}
+
+\paragraph{中间状态}
+字段统计画像、跨列关系摘要、图结构特征、可检验洞察列表
+
+\paragraph{输出对象}
+证据化规划上下文与候选分析锚点
+
+\paragraph{失败模式}
+若数据预览质量不足、图结构特征缺失或洞察生成过于空泛，系统会退化为问题语义驱动规划。
+
+\paragraph{降级策略}
+保留字段统计与时间分布等基础证据，禁用高风险洞察，避免在证据不足时强行注入结论性提示。
+
+\subsection{Knowledge-Constrained Planning}
+
+Knowledge-Constrained Planning 使用两类图谱分别约束两层不同决策。因果图谱作用于假设空间，用于限定哪些变量关系更值得优先考察；方法图谱作用于执行空间，用于限定哪些方法组合在当前证据条件下更适合被调用。通过这种分层约束，系统不再把所有知识资源混成统一模板，而是显式区分“为何分析”和“如何分析”\citep{liu2016knowledge,pan2024unifying,edge2024graphrag}。
+
+\paragraph{输入对象}
+证据化规划上下文、因果图谱、方法图谱
+
+\paragraph{中间状态}
+候选假设集合、候选方法集合、任务依赖关系
+
+\paragraph{输出对象}
+结构化分析计划 JSON，包括任务列表、变量引用、方法选择和参数配置
+
+\paragraph{失败模式}
+若图谱约束过强，系统可能压缩探索空间；若图谱约束过弱，则无法提供稳定结构先验。
+
+\paragraph{降级策略}
+当问题开放度较高或数据证据已足够清晰时，降低图谱对变量路径的硬约束权重，只保留方法合法性约束。
+
+\subsection{Iterative Refinement}
+
+Iterative Refinement 负责把执行反馈重新写回规划过程。首轮执行后，系统会检查未覆盖字段、证据冲突、方法不匹配和结论支撑不足等问题，并生成第二轮修订计划。第二轮不是对首轮任务的简单重复，而是围绕证据缺口进行补证据、换方法、增控制和做稳健性分析。这一点与只把反馈用于脚本纠错的机制不同，更接近把反馈作为再规划信号的做法\citep{shinn2024reflexion,zhou2024hypothesis}。
+
+\paragraph{输入对象}
+首轮计划、执行产物、执行日志与差距识别结果
+
+\paragraph{中间状态}
+错误分类、证据缺口、方法替换候选、深化任务候选
+
+\paragraph{输出对象}
+修订后的结构化计划与第二轮执行任务
+
+\paragraph{失败模式}
+若反馈信号仅停留在脚本报错层面，系统会把第二轮退化为纠错流程，而非规划深化流程。
+
+\paragraph{降级策略}
+将技术错误与研究缺口分离处理；只有研究缺口才进入第二轮规划，脚本错误交由执行层处理。
+
+\subsection{与代表性方法的机制差异}
+
+本文方法与代表性路线的差异不在于是否使用 LLM，而在于是否把规划前的数据感知、规划中的知识约束和规划后的反馈回写统一成闭环。表~\ref{tab:mechanism-compare} 给出本文方法与三类代表性路线的机制差异。这里的两类外部路线分别对应本文实验中的 ReAct-style single-agent baseline 和 execution-feedback baseline；“知识增强基线”对应只引入知识约束而不引入数据感知与反馈迭代的单轮方案。
+
+\begin{table}[H]
+\centering
+\caption{本文方法与代表性路线的机制差异}
+\label{tab:mechanism-compare}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+方法路线 & 规划前数据感知 & 假设/方法空间区分 & 执行反馈驱动再规划 & 结构化可复验计划 \\
+\midrule
+ReAct-style single-agent baseline & 否 & 否 & 否 & 是 \\
+execution-feedback baseline & 否 & 否 & 是 & 是 \\
+知识增强单轮基线 & 否 & 部分支持 & 否 & 是 \\
+本文方法 & 是 & 是 & 是 & 是 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+这一差异决定了本文实验设计不能只停留在内部消融。内部实验负责说明系统为什么逐步变好，外部机制基线负责说明“只靠单智能体”或“只靠执行反馈”是否已经足够，而子领域稳定性、跨领域初步验证和人工盲评则进一步说明这种优势是否具有外部有效性。
+
+\begin{table}[H]
+\centering
+\caption{统一规划流程伪代码}
+\label{tab:planning-pseudocode}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lp{0.83\textwidth}}
+\toprule
+步骤 & 伪代码说明 \\
+\midrule
+1 & 输入研究问题 $q$、数据画像 \texttt{dataset\_profile}、图画像 \texttt{graph\_profile}、知识开关 \texttt{knowledge\_enabled} 和规划轮数 \texttt{iteration\_rounds}；\\
+2 & 运行 Evidence Grounding，生成字段统计、图结构线索和候选洞察，并形成证据化上下文；\\
+3 & 若知识开关开启，则分别从因果图谱与方法图谱检索约束，构造候选假设集合与候选方法集合；\\
+4 & 生成首轮结构化计划 JSON，并交由规格化与执行模块运行；\\
+5 & 收集执行日志、结果摘要和证据缺口，区分“脚本错误”与“研究缺口”；\\
+6 & 若 \texttt{iteration\_rounds}>1 且存在研究缺口，则触发 Iterative Refinement 生成修订计划 $P'$；\\
+7 & 输出最终的 \texttt{plan\_json}、执行产物、自动化指标和语义评分，并进入重复实验汇总与统计导出。\\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

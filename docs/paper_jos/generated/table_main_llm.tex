@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{四方案 LLM-as-Judge 评分对比（5 问题 $\times$ 5 次重复的均值 $\pm$ 标准差）}
+\label{tab:jos-main-llm}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+维度 & D\_baseline0 & A\_template & B\_data\_aware & C\_iterative \\
+\midrule
+相关性 & 3.68 ± 0.48 & 3.72 ± 0.54 & 4.04 ± 0.84 & 4.80 ± 0.41 \\
+针对性 & 3.28 ± 0.46 & 3.64 ± 0.64 & 3.96 ± 0.73 & 4.80 ± 0.50 \\
+方法合理性 & 3.44 ± 0.58 & 3.40 ± 0.65 & 3.64 ± 0.81 & 4.76 ± 0.52 \\
+创新性 & 2.76 ± 0.60 & 2.92 ± 0.81 & 3.76 ± 0.60 & 4.68 ± 0.56 \\
+深度 & 3.00 ± 0.50 & 2.88 ± 0.44 & 3.40 ± 0.76 & 4.76 ± 0.52 \\
+总分(/25) & 16.16 ± 1.86 & 16.56 ± 2.36 & 18.80 ± 3.03 & 23.80 ± 2.12 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

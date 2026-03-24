@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\centering
+\caption{关键配对比较的 Wilcoxon 检验结果（LLM 总分）}
+\label{tab:jos-significance}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllllll}
+\toprule
+比较 & n & 均值差 & 95\% CI & p & Holm校正后p & 效应量 \\
+\midrule
+B\_data\_aware vs A\_template & 15 & 2.07 & [0.00, 4.07] & 0.0780 & 0.3119 & 0.533 \\
+B\_data\_aware vs D\_baseline0 & 15 & 3.13 & [1.40, 4.60] & 0.0084 & 0.0418 & 0.758 \\
+C\_iterative vs B\_data\_aware & 15 & 5.27 & [3.53, 7.00] & 0.0003 & 0.0027 & 0.958 \\
+C\_iterative vs E\_ablate\_data & 15 & 1.80 & [0.87, 2.80] & 0.0055 & 0.0331 & 0.939 \\
+C\_iterative vs F\_ablate\_kg & 15 & 1.67 & [-0.40, 3.80] & 0.1754 & 0.3508 & 0.410 \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{0.3em}
+\begin{minipage}{0.96\linewidth}
+\footnotesize\raggedright
+注：均值差按“左侧模式减右侧模式”计算，效应量为 rank-biserial correlation。
+\end{minipage}
+\end{table}

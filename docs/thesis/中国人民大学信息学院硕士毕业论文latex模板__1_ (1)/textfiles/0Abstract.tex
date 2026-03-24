@@ -1,0 +1,27 @@
+\newpage
+\section*{摘\ \ 要}
+
+针对专利计量研究中”分析方案依赖人工设计、自动化系统规划能力不足”的问题，本文提出一种数据感知驱动的多智能体专利分析框架。现有大语言模型系统在代码执行与报告生成方面已具备一定能力，但在方案设计阶段普遍缺少对真实数据分布与结构特征的前置感知，导致任务容易模板化、结论针对性不足。为解决该问题，本文构建了由规划智能体、方法规格化智能体、执行智能体和评审智能体组成的四智能体协作系统，并通过工作流编排框架实现端到端流程管理。
+
+在方法上，本文提出三项关键机制。第一，数据感知前置机制：在规划前引入数据预览与图结构预览模块，提取列级统计、跨列关系、图结构特征和分层抽样语义样本，并驱动大语言模型生成可检验研究洞察。第二，双知识图谱协同机制：将因果图谱用于约束研究假设空间，将方法图谱用于约束分析执行空间，实现”理论解释”与”方法可执行”的协同。第三，两轮迭代优化机制：以第一轮执行结果为反馈，触发第二轮差距修补与验证性分析，形成”探索—验证”闭环。
+
+实验采用四方案渐进叠加与两组组件消融设计，在三个典型专利计量问题上对 6 种模式各重复运行 5 次，共完成 90 组实验。结果表明，完整方案（C\_iterative）在四方案主实验与六模式总览中均保持最高平均总分（23.87/25），且在相关性、针对性、方法合理性、创新性和深度五个维度上表现最稳定。相比 A\_template 与 D\_baseline0，B\_data\_aware 在重复实验中稳定取得更高语义评分和更强的数据证据引用，说明数据感知是推动方案从“问题语义驱动”转向“数据证据驱动”的关键环节。组件消融结果进一步表明，移除数据感知或知识图谱都会降低平均表现，其中数据感知对针对性引用和方案聚焦的贡献更直接；知识图谱收益则具有任务依赖性，在结构锚点清晰、分析链条较长的问题上作用更明显，而在开放度更高的问题上需要避免静态路径过度约束。
+
+本文工作从”执行自动化”进一步推进到”规划自动化”，为专利计量分析提供了可复现、可追踪的系统化实现方案，并在所测试的三个研究问题上展示出初步工程可行性，对技术情报分析和知识产权决策具有参考价值。
+
+\vspace{1em}
+\noindent\textbf{关键词：}多智能体系统；专利计量；数据感知；知识图谱；自动化分析
+
+\newpage
+\section*{Abstract}
+
+This thesis addresses a core limitation in patent analytics automation: existing LLM-based systems are increasingly capable at execution but still weak at analysis planning. In many cases, plans are generated without sufficient grounding in dataset-specific evidence, resulting in template-like tasks and limited specificity. To solve this problem, we design a data-aware multi-agent framework for patent analytics, including four specialized agents (planning agent, specification agent, execution agent, and review agent), orchestrated by a workflow management framework.
+
+The proposed method contains three key components. First, a pre-planning data-awareness mechanism introduces DataPreview and GraphPreview to extract column-level statistics, cross-column relations, graph-structural signals, and stratified semantic samples, then converts them into testable insights through LLM reasoning. Second, a dual-knowledge-graph collaboration mechanism is designed: a causal graph constrains hypothesis space, while a method graph constrains executable analysis space. Third, a two-round iterative mechanism refines plans using first-round execution feedback, enabling an exploration-to-validation loop.
+
+We evaluate the framework with progressive accumulation across four modes (D\_baseline0, A\_template, B\_data\_aware, C\_iterative) and two component ablation settings on three representative patent bibliometrics tasks. Each of the six modes is repeated five times, yielding 90 runs in total. Across repeated experiments, C\_iterative achieves the highest overall average score (23.87/25) and remains the most stable top-performing configuration. Compared with A\_template and D\_baseline0, B\_data\_aware consistently improves semantic quality and evidence grounding, indicating that data awareness is the main driver that shifts planning from question-driven generation toward evidence-driven generation. Ablation results further show that removing either data awareness or knowledge graphs lowers the average performance; however, the gain from knowledge-graph guidance is task-dependent, helping more on problems with clear structural anchors and multi-step analytic chains than on more open-ended tasks.
+
+The study advances automation from execution-level to planning-level intelligence and provides a reproducible, extensible, and traceable framework for real-world patent analytics, with preliminary engineering feasibility demonstrated on the three tested questions.
+
+\vspace{1em}
+\noindent\textbf{Keywords: }multi-agent system; patent bibliometrics; data awareness; knowledge graph; automated analytics

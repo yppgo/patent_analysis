@@ -70,6 +70,42 @@ class StrategistAgent(BaseAgent):
         except Exception as e:
             self.log(f"⚠️ 无法从数据文件读取列名: {e}", "warning")
             return None
+
+    @staticmethod
+    def _normalize_column_reference(value: Any) -> Any:
+        """
+        归一化列名引用，消除 LLM 常见的首尾引号和多余空白。
+        """
+        if not isinstance(value, str):
+            return value
+
+        normalized = value.strip()
+        while len(normalized) >= 2 and normalized[0] == normalized[-1] and normalized[0] in {"'", '"', "`"}:
+            normalized = normalized[1:-1].strip()
+        return normalized
+
+    @staticmethod
+    def _resolve_column_alias(normalized_value: str, available_lookup: Dict[str, str]) -> Optional[str]:
+        """
+        为跨领域数据提供少量保守别名映射，降低时间字段等常见幻觉列名导致的失败率。
+        """
+        if normalized_value in available_lookup:
+            return available_lookup[normalized_value]
+
+        alias_candidates = {
+            "year": ["created_at", "resolved_at"],
+            "date": ["created_at", "resolved_at"],
+            "time": ["created_at", "resolved_at"],
+            "timestamp": ["created_at", "resolved_at"],
+            "product": ["product/project"],
+            "project": ["product/project"],
+        }
+
+        for candidate in alias_candidates.get(normalized_value, []):
+            if candidate in available_lookup:
+                return available_lookup[candidate]
+
+        return None
     
     def _generate_hypotheses_from_causal_graph(self, user_goal: str, keywords: List[str]) -> Dict:
         """
@@ -361,6 +397,8 @@ class StrategistAgent(BaseAgent):
         """
         第二轮专用：基于第一轮结果生成深入分析方案。
         """
+        active_data_file = self.data_file
+        active_sheet_name = self.sheet_name
         columns_semantic = self._describe_columns_semantics(available_columns)
         insights_section = self._format_data_insights_for_prompt(data_insights) if data_insights else ""
 
@@ -402,7 +440,7 @@ class StrategistAgent(BaseAgent):
 
 **⚠️ 关键约束：**
 1. 列名必须完全匹配【实际列名】
-2. 数据源路径: data/new_data.XLSX, sheet: sheet1
+2. 数据源路径: {active_data_file}, sheet: {active_sheet_name}
 3. 输出结论性数据（JSON 汇总优先）
 
 **输出格式（严格 JSON）：**
@@ -424,8 +462,8 @@ class StrategistAgent(BaseAgent):
       "dependencies": [],
       "description": "步骤说明",
       "implementation_config": {{
-        "data_source": "data/new_data.XLSX",
-        "sheet_name": "sheet1",
+        "data_source": "{active_data_file}",
+        "sheet_name": "{active_sheet_name}",
         "columns_to_load": ["列名"],
         "parameters": {{}},
         "output_format": "json",
@@ -589,6 +627,7 @@ class StrategistAgent(BaseAgent):
         else:
             blueprint = self._generate_with_legacy_mode(user_goal, method_context, available_columns)
 
+        blueprint = self._bind_active_data_source(blueprint)
         self.log(f"[V5.0] 战略蓝图生成完成 (模式: {'DAG' if use_dag else 'Legacy'}, 轮次: {round_num})")
 
         result = {
@@ -605,6 +644,31 @@ class StrategistAgent(BaseAgent):
             result['hypotheses'] = hypothesis_result
 
         return result
+
+    def _bind_active_data_source(self, blueprint: Dict[str, Any]) -> Dict[str, Any]:
+        """将当前生效的数据源路径回填到蓝图，避免迁移实验被写回默认路径。"""
+        if not isinstance(blueprint, dict):
+            return blueprint
+
+        task_graph = blueprint.get("task_graph")
+        if isinstance(task_graph, list):
+            for task in task_graph:
+                config = task.get("implementation_config")
+                if isinstance(config, dict):
+                    config["data_source"] = self.data_file
+                    config["sheet_name"] = self.sheet_name
+
+        logic_chains = blueprint.get("analysis_logic_chains")
+        if isinstance(logic_chains, list):
+            for step in logic_chains:
+                config = step.get("implementation_config")
+                if not isinstance(config, dict):
+                    continue
+                input_source = config.get("input_data_source")
+                if isinstance(input_source, dict):
+                    input_source["main_data"] = self.data_file
+
+        return blueprint
     
     def _generate_with_dag_mode(
         self,
@@ -839,6 +903,8 @@ class StrategistAgent(BaseAgent):
         """
         生成基于 DAG 的研究战略蓝图（集成数据洞察 + 假设 + 图结构）
         """
+        active_data_file = self.data_file
+        active_sheet_name = self.sheet_name
         # 格式化列名语义描述
         columns_semantic = self._describe_columns_semantics(available_columns)
 
@@ -869,7 +935,7 @@ class StrategistAgent(BaseAgent):
 1. **列名必须完全匹配**：只能使用上面【实际列名】中列出的列名，一个字都不能改
 2. **禁止自创列名**：不要使用任何未在上面列出的列名（如 ID, Title, Abstract, Applicant, Grant Date 等）
 3. **直接复制列名**：从【实际列名】中直接复制粘贴，确保完全一致（包括括号、空格等）
-4. **数据源路径固定**：主数据路径必须使用 `data/new_data.XLSX`，sheet名为 `sheet1`
+4. **数据源路径固定**：主数据路径必须使用 `{active_data_file}`，sheet名为 `{active_sheet_name}`
 
 **错误示例（禁止）:**
 - ❌ "ID" （应该使用 "序号"）
@@ -983,8 +1049,8 @@ class StrategistAgent(BaseAgent):
       "dependencies": [],
       "description": "步骤说明",
       "implementation_config": {{
-        "data_source": "data/new_data.XLSX",
-        "sheet_name": "sheet1",
+        "data_source": "{active_data_file}",
+        "sheet_name": "{active_sheet_name}",
         "columns_to_load": ["<列名1>", "<列名2>"],
         "parameters": {{}},
         "output_format": "json",
@@ -1074,7 +1140,7 @@ class StrategistAgent(BaseAgent):
 
 **生成前检查清单:**
 - [ ] 所有列名都在【实际列名】中
-- [ ] 数据源路径为 data/new_data.XLSX（sheet1）
+- [ ] 数据源路径为 {active_data_file}（{active_sheet_name}）
 - [ ] 变量命名与计算方式来源于任务语义与可用列（不预设固定指标）
 - [ ] 中介分析的三个变量（X、M、Y）必须不同
 - [ ] 控制变量不能是中介变量本身
@@ -1260,7 +1326,12 @@ class StrategistAgent(BaseAgent):
         Returns:
             bool: 是否通过检查
         """
-        available_set = set(available_columns)
+        available_lookup = {
+            self._normalize_column_reference(column): column
+            for column in available_columns
+            if isinstance(column, str)
+        }
+        available_set = set(available_lookup)
         
         for task in task_graph:
             config = task.get('implementation_config', {})
@@ -1268,7 +1339,19 @@ class StrategistAgent(BaseAgent):
             # 检查 columns_to_load
             columns_to_load = config.get('columns_to_load', [])
             if columns_to_load:
-                invalid_cols = set(columns_to_load) - available_set
+                normalized_columns = []
+                invalid_cols = set()
+
+                for column in columns_to_load:
+                    normalized_column = self._normalize_column_reference(column)
+                    canonical_column = self._resolve_column_alias(normalized_column, available_lookup)
+                    if canonical_column is None:
+                        invalid_cols.add(column)
+                        normalized_columns.append(column)
+                    else:
+                        normalized_columns.append(canonical_column)
+
+                config['columns_to_load'] = normalized_columns
                 if invalid_cols:
                     self.log(
                         f"列名检查失败: 任务 {task['task_id']} 使用了不存在的列名 {invalid_cols}",
@@ -1279,12 +1362,16 @@ class StrategistAgent(BaseAgent):
             
             # 检查 text_column
             text_column = config.get('text_column')
-            if text_column and text_column not in available_set:
-                self.log(
-                    f"列名检查失败: 任务 {task['task_id']} 使用了不存在的文本列 {text_column}",
-                    "error"
-                )
-                return False
+            if text_column:
+                normalized_text_column = self._normalize_column_reference(text_column)
+                canonical_text_column = self._resolve_column_alias(normalized_text_column, available_lookup)
+                if canonical_text_column is None:
+                    self.log(
+                        f"列名检查失败: 任务 {task['task_id']} 使用了不存在的文本列 {text_column}",
+                        "error"
+                    )
+                    return False
+                config['text_column'] = canonical_text_column
         
         return True
     

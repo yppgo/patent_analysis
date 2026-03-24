@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{完整系统与外部基线的 LLM-as-Judge 评分对比（均值 $\pm$ 标准差）}
+\label{tab:jos-external-llm}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llll}
+\toprule
+维度 & C\_iterative & G\_react\_single\_agent & H\_execution\_feedback \\
+\midrule
+相关性 & 4.80 ± 0.41 & 3.96 ± 0.61 & 4.68 ± 0.80 \\
+针对性 & 4.80 ± 0.50 & 3.40 ± 0.82 & 4.56 ± 0.87 \\
+方法合理性 & 4.76 ± 0.52 & 3.28 ± 0.68 & 4.16 ± 0.80 \\
+创新性 & 4.68 ± 0.56 & 2.16 ± 0.55 & 3.76 ± 0.52 \\
+深度 & 4.76 ± 0.52 & 2.36 ± 0.81 & 4.08 ± 0.81 \\
+总分(/25) & 23.80 ± 2.12 & 15.16 ± 3.09 & 21.24 ± 3.26 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

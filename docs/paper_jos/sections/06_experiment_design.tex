@@ -1,0 +1,46 @@
+\section{实验设计}
+
+\subsection{研究问题与证据层}
+
+增强版投稿路线将主数据集上的研究问题扩展为五类：Q1 技术影响力驱动因素分析、Q2 技术融合趋势识别、Q3 国家/地区竞争态势评估、Q4 技术生命周期阶段判断、Q5 专利组合风险评估。五类问题分别覆盖解释型、结构趋势型、比较评估型、时序阶段判断型和综合风险评估型分析需求，可用于检验规划系统在变量锚定、方法组织和证据闭环上的稳定性。这里采用的是“最小冻结集 + 构念补齐”的两阶段设计，而不是一次性任意罗列问题：早期冻结版先固定 Q1--Q3，形成 `6 模式 × 3 问题 × 5 重复 = 90` 组的最小可复验证据池，用于先验证主排序、统计流程和结果合法性校验是否稳定；增强版再补入 Q4/Q5，以弥补前三类问题对时间阶段判断和综合风险归因覆盖不足的问题。新增问题的进入标准是必须引入前一组问题未被充分施压的规划需求，而不是仅在表述层面改写已有问题。跨领域 Bugzilla 小验证则采用软件工程适配后的三类问题：缺陷影响因素分析、缺陷与模块演化趋势识别，以及项目/组件质量评估。
+
+期刊稿实验采用三层证据链。第一层是内部机制归因，用四方案渐进实验和组件消融回答系统为什么逐步变好。第二层是外部机制对比，用 literature-inspired baselines 检验“单智能体一次性规划”或“仅靠执行反馈”是否已经足够。第三层是外部有效性验证，通过相邻技术子领域稳定性、软件工程数据上的跨领域小规模验证和人工盲评评估方法的跨数据集稳定性与人工可接受性。
+
+\subsection{数据集与统一实验接口}
+
+主数据集为 \texttt{main\_data\_security}，包含数据安全相关专利及其技术、法律、时间和组织字段。相邻技术子领域稳定性验证使用独立物化的数据集 \texttt{transfer\_iot\_auto}，用于检验方法在“数据安全专利主集 $\rightarrow$ 物联网与智能汽车安全子集”上的稳健性。真跨领域小验证使用 \texttt{cross\_domain\_bugzilla}，其字段至少覆盖 \texttt{title}、\texttt{description}、\texttt{severity}、\texttt{component}、\texttt{product/project}、\texttt{created\_at}、\texttt{resolved\_at}、\texttt{reporter} 和 \texttt{assignee}。三类数据集均通过统一注册表进行加载和调度，避免学位论文证据与期刊稿证据相互覆盖。
+
+所有实验共享统一输入接口：\texttt{question}、\texttt{dataset\_profile}、\texttt{graph\_profile}、\texttt{knowledge\_enabled}、\texttt{iteration\_rounds} 和 \texttt{budget\_config}。输出接口固定为结构化计划 JSON、执行产物、自动化指标、语义评分和统计汇总。统一接口的作用是保证不同模式、不同数据集和不同证据池中的结果可以在同一评价协议下比较。
+
+\subsection{分层实验设置}
+
+\paragraph{主实验：渐进叠加}
+主实验比较 \texttt{D\_baseline0}、\texttt{A\_template}、\texttt{B\_data\_aware} 和 \texttt{C\_iterative}。其中，\texttt{D\_baseline0} 代表纯 LLM 规划，\texttt{A\_template} 在其上增加知识模板，\texttt{B\_data\_aware} 进一步注入数据预览与证据锚点，\texttt{C\_iterative} 则在此基础上加入两轮规划-执行-反馈闭环。增强版正式目标规模为 \texttt{4 模式 × 5 问题 × 5 重复}，该组实验回答“系统为何逐步变好”。
+
+\paragraph{组件消融}
+组件消融比较 \texttt{C\_iterative}、\texttt{E\_ablate\_data} 和 \texttt{F\_ablate\_kg}，分别用于检验移除数据感知和移除知识图谱后的性能变化。该组实验回答“完整系统中核心组件各自贡献了什么”。主实验与消融共享同一主证据池，增强版正式目标为 \texttt{6 模式 × 5 问题 × 5 重复 = 150} 组内部证据；当前已冻结的可用内部证据仍为 \texttt{6 模式 × 3 问题 × 5 重复 = 90} 组。
+
+\paragraph{外部基线}
+外部基线采用两条文献启发的机制路线：\texttt{G\_react\_single\_agent}（ReAct-style single-agent baseline）和 \texttt{H\_execution\_feedback}（execution-feedback baseline）。两类基线均定位为 external mechanism baselines，而非严格文献系统复现。增强版正式目标是在主数据集上按 \texttt{5 问题 × 5 重复} 完成 \texttt{50} 组新增实验；当前已完成的版本为 \texttt{3 问题 × 5 重复 = 30} 组。
+
+为避免事后倒选，子领域稳定性验证所使用的 strongest external mechanism baseline 在主数据集外部机制基线完成后即固定锁定，选择规则依次为：LLM 总分均值更高、LLM 总分标准差更小、\texttt{specificity\_references} 均值更高。当前已锁定的模式为 \texttt{H\_execution\_feedback}。
+
+\paragraph{子领域稳定性验证}
+相邻技术子领域稳定性验证固定在 \texttt{transfer\_iot\_auto} 上比较 \texttt{D\_baseline0}、\texttt{B\_data\_aware}、\texttt{C\_iterative} 和 strongest external mechanism baseline，正式目标为 \texttt{5 问题 × 3 重复 = 60} 组。这里的定位是“子领域稳定性检验”，其作用是说明方法不易过拟合主数据集；本文明确不把这一设置写成强跨领域迁移验证。此前的 \texttt{36} 组旧批次由于大量失败已整体废弃，不进入正文统计。
+
+\paragraph{跨领域初步验证}
+真跨领域验证使用 \texttt{cross\_domain\_bugzilla}，仅比较 \texttt{D\_baseline0} 与 \texttt{C\_iterative} 两个模式，按软件工程适配后的三类问题各重复 3 次，总规模为 \texttt{18} 组。该实验不复用专利知识图谱；若知识资源无法直接迁移，则以 \texttt{knowledge\_enabled=False} 运行，并将结果解释为框架的降级鲁棒性，而不是知识图谱的直接迁移能力。
+
+\subsection{评价协议与统计方法}
+
+本文采用双轨评价。自动化指标用于衡量计划是否能够覆盖关键字段、组织足够的方法组合并保持较高执行成功率；LLM-as-Judge 则从相关性、针对性、方法合理性、创新性和深度五个维度对匿名化方案进行评分。正文和表图统一报告重复实验的均值与标准差，并将 95\% bootstrap 置信区间作为关键配对比较的补充不确定性估计。
+
+统计检验采用非参数路线。整体比较使用 Friedman 检验；关键配对比较使用 Wilcoxon signed-rank test 并进行 Holm 校正；效应量使用 rank-biserial correlation，并为关键比较补充 95\% bootstrap 置信区间。为保证口径一致，主实验、外部基线、子领域稳定性和跨领域验证分别在各自证据池内汇总，再按预定义模式集合组织统计结果，禁止将不同证据池中的原始结果直接混成单一总表。
+
+\subsection{人工盲评协议}
+
+人工盲评对象固定为匿名化后的规划方案 blueprint，不包含执行代码。盲评集合覆盖三类比较：\texttt{D/B/C}、\texttt{C/E/F} 和 \texttt{C/strongest external mechanism baseline}。每位评审对每份匿名方案按相关性、针对性、方法合理性、创新性、深度和可执行性六个维度给出 1--5 分。增强版投稿路线默认邀请 4 位评审，确保至少 3 位完成有效回收，并报告评审间一致性指标。匿名标签与模式映射分离保存，以降低先验偏见对评分的影响。
+
+\subsection{证据目录与可追溯性}
+
+为避免学位论文目录被覆盖，本文将主实验、外部基线、子领域稳定性验证、跨领域验证和人工盲评分别保存到独立证据目录中。正文表图只从对应目录导出的汇总文件中取数：内部机制归因使用 \texttt{\detokenize{outputs/repeated_experiments_full/}}，外部机制基线使用 \texttt{\detokenize{outputs/repeated_experiments_external_main/}}，子领域稳定性使用 \texttt{\detokenize{outputs/repeated_experiments_transfer_iot_auto/}}，跨领域验证使用 \texttt{\detokenize{outputs/repeated_experiments_cross_domain_bugzilla/}}，人工盲评使用 \texttt{\detokenize{outputs/jos_artifacts/human_review/}}。这一设计保证每个结论都可以追溯到独立、稳定且不互相覆盖的证据池。

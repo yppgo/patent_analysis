@@ -74,6 +74,31 @@ _archive/
 *.tmp
 *.bak
 *.swp
+.codex_tmp/
+_video_frames/
+intermediate/
+precomputed/
+docs/paper_jos/*.aux
+docs/paper_jos/*.bbl
+docs/paper_jos/*.blg
+docs/paper_jos/*.log
+docs/paper_jos/*.out
+docs/paper_jos/*.pdf
+docs/paper_jos/generated/_codex_*
+docs/thesis/_ppt_last_pages/
+docs/thesis/_tmp_review_last_pages.pptx
+docs/thesis/毕业答辩.pptx
+docs/thesis/答辩PPT_updated.pptx
+docs/thesis/~$*.docx
+docs/thesis/*.zip
+docs/thesis/**/*.aux
+docs/thesis/**/*.blg
+docs/thesis/**/*.out
+docs/thesis/**/*.toc
+docs/thesis/**/*.lof
+docs/thesis/**/*.lot
+docs/thesis/**/compile_output.txt
+docs/thesis/**/Untitled
 
 # Large files
 *.xlsx

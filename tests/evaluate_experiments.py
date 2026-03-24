@@ -27,14 +27,20 @@ EXPERIMENT_FILES = [
     "experiment_q1_A_template.json",
     "experiment_q1_B_data_aware.json",
     "experiment_q1_C_iterative.json",
+    "experiment_q1_E_ablate_data.json",
+    "experiment_q1_F_ablate_kg.json",
     "experiment_q2_D_baseline0.json",
     "experiment_q2_A_template.json",
     "experiment_q2_B_data_aware.json",
     "experiment_q2_C_iterative.json",
+    "experiment_q2_E_ablate_data.json",
+    "experiment_q2_F_ablate_kg.json",
     "experiment_q3_D_baseline0.json",
     "experiment_q3_A_template.json",
     "experiment_q3_B_data_aware.json",
     "experiment_q3_C_iterative.json",
+    "experiment_q3_E_ablate_data.json",
+    "experiment_q3_F_ablate_kg.json",
 ]
 
 # 用于匹配具体数据引用的正则
@@ -84,7 +90,9 @@ class ExperimentEvaluator:
         tasks = []
         for rnd in experiment.get("rounds", []):
             blueprint = rnd.get("blueprint", {})
-            tasks.extend(blueprint.get("task_graph", []))
+            task_graph = blueprint.get("task_graph") or []
+            if isinstance(task_graph, list):
+                tasks.extend(task_graph)
         return tasks
 
     def _get_all_blueprints(self, experiment: Dict) -> List[Dict]:
@@ -99,8 +107,11 @@ class ExperimentEvaluator:
         all_columns = set()
         for task in self._get_all_tasks(experiment):
             config = task.get("implementation_config", {})
-            cols = config.get("columns_to_load", [])
-            all_columns.update(cols)
+            cols = config.get("columns_to_load") or []
+            if isinstance(cols, str):
+                cols = [cols]
+            if isinstance(cols, (list, tuple, set)):
+                all_columns.update(col for col in cols if col)
         return round(len(all_columns) / TOTAL_COLUMNS, 3)
 
     def _method_diversity(self, experiment: Dict) -> int:
@@ -126,14 +137,17 @@ class ExperimentEvaluator:
         """方案针对性 = 任务描述+问题中引用具体数据特征的次数"""
         count = 0
         for task in self._get_all_tasks(experiment):
-            text = task.get("description", "") + " " + task.get("question", "")
+            text = f"{task.get('description') or ''} {task.get('question') or ''}"
             for pattern in SPECIFICITY_PATTERNS:
                 count += len(re.findall(pattern, text))
         for bp in self._get_all_blueprints(experiment):
-            for outcome in bp.get("expected_outcomes", []):
+            outcomes = bp.get("expected_outcomes") or []
+            if isinstance(outcomes, str):
+                outcomes = [outcomes]
+            for outcome in outcomes:
                 for pattern in SPECIFICITY_PATTERNS:
-                    count += len(re.findall(pattern, outcome))
-            obj = bp.get("research_objective", "")
+                    count += len(re.findall(pattern, outcome or ""))
+            obj = bp.get("research_objective") or ""
             for pattern in SPECIFICITY_PATTERNS:
                 count += len(re.findall(pattern, obj))
         return count
@@ -143,6 +157,8 @@ class ExperimentEvaluator:
         count = 0
         for task in self._get_all_tasks(experiment):
             params = task.get("implementation_config", {}).get("parameters", {})
+            if not isinstance(params, dict):
+                continue
             for key in ["control_vars", "control_variables"]:
                 val = params.get(key, [])
                 if isinstance(val, list):
@@ -154,6 +170,8 @@ class ExperimentEvaluator:
         count = 0
         for task in self._get_all_tasks(experiment):
             params = task.get("implementation_config", {}).get("parameters", {})
+            if not isinstance(params, dict):
+                continue
             for v in params.values():
                 if v is not None and v != "" and v != []:
                     count += 1
@@ -163,7 +181,11 @@ class ExperimentEvaluator:
         """预期结论具体度 = expected_outcomes 中含具体数值/统计量的条目比例"""
         all_outcomes = []
         for bp in self._get_all_blueprints(experiment):
-            all_outcomes.extend(bp.get("expected_outcomes", []))
+            outcomes = bp.get("expected_outcomes") or []
+            if isinstance(outcomes, str):
+                outcomes = [outcomes]
+            if isinstance(outcomes, list):
+                all_outcomes.extend(outcomes)
         if not all_outcomes:
             return 0.0
         has_number = 0
@@ -184,6 +206,8 @@ class ExperimentEvaluator:
                 continue
             bp = rnd.get("blueprint", {})
             trace = bp.get("thinking_trace", {})
+            if not isinstance(trace, dict):
+                continue
             insights = trace.get("selected_insights", [])
             if isinstance(insights, list):
                 count += len(insights)
@@ -227,7 +251,7 @@ class ExperimentEvaluator:
 
         # 按模式聚合
         aggregated = {}
-        modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative"]
+        modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative", "E_ablate_data", "F_ablate_kg"]
         metric_keys = [
             "column_coverage", "method_diversity", "avg_description_length",
             "specificity_references", "control_variable_count", "parameter_richness",
@@ -395,8 +419,8 @@ class ExperimentEvaluator:
         scores_list = []
 
         # 动态检测可用模式并分配匿名标签
-        all_modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative"]
-        anon_labels = ["W", "X", "Y", "Z"]
+        all_modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative", "E_ablate_data", "F_ablate_kg"]
+        anon_labels = ["W", "X", "Y", "Z", "U", "V"]
 
         for qi, (question, exps) in enumerate(questions.items()):
             q_short = question[:20] + "..."
@@ -491,7 +515,7 @@ class ExperimentEvaluator:
         print("  汇总对比表")
         print("=" * 80)
 
-        all_modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative"]
+        all_modes = ["D_baseline0", "A_template", "B_data_aware", "C_iterative", "E_ablate_data", "F_ablate_kg"]
 
         if self.auto_metrics:
             print("\n--- 自动化指标（3 问题平均值）---")

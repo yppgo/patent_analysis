@@ -1,0 +1,69 @@
+\section{问题定义}
+
+\subsection{任务定义}
+
+本文关注的任务可形式化为：给定研究问题 $q$、结构化数据集 $D$、图结构资源 $G$、领域知识资源 $K$ 与预算配置 $B$，系统需要输出一个结构化分析计划
+\[
+P=\{t_i\}_{i=1}^{n},\quad
+t_i=(m_i, S_i, \theta_i, \delta_i, o_i),
+\]
+并在必要时结合首轮执行反馈 $F$ 生成修订后的计划 $P'$。其中，$m_i$ 表示分析方法，$S_i$ 表示任务引用的数据列集合，$\theta_i$ 表示参数配置，$\delta_i$ 表示任务依赖关系，$o_i$ 表示预期输出。这里的结构化分析计划不仅包含待执行任务列表，还包括任务对应的变量引用、方法选择、参数设置、预期证据和执行顺序。
+
+\subsection{输入接口}
+
+本文统一采用如下输入对象：
+
+\begin{itemize}
+  \item \texttt{question}：研究问题文本及其任务类型标记；
+  \item \texttt{dataset\_profile}：数据预览结果，包括字段类型、缺失、统计分布、跨列关系与样本摘要；
+  \item \texttt{graph\_profile}：图结构预览结果，包括节点中心性、社区结构、桥接位置和时间演化特征；
+  \item \texttt{knowledge\_enabled}：知识约束开关以及所启用的图谱资源；
+  \item \texttt{iteration\_rounds}：规划轮数配置；
+  \item \texttt{budget\_config}：执行预算与输出约束。
+\end{itemize}
+
+\subsection{输出接口}
+
+系统输出由五类对象组成：
+
+\begin{itemize}
+  \item \texttt{plan\_json}：结构化计划及任务依赖关系；
+  \item \texttt{execution\_artifacts}：代码脚本、执行日志和中间产物；
+  \item \texttt{auto\_metrics}：可自动统计的结构指标；
+  \item \texttt{judge\_scores}：语义评估结果；
+  \item \texttt{stats\_summary}：重复实验和统计推断结果。
+\end{itemize}
+
+\subsection{设计目标}
+
+本文方法面向三类目标：第一，规划方案应尽可能建立在当前数据证据之上，而非仅靠问题语义触发模板；第二，规划结果应同时满足理论解释的结构性和执行方法的可落地性；第三，系统应能够利用执行反馈显式修正首轮规划中的不足，而不是只把反馈用于脚本级纠错。
+
+\subsection{规划质量形式化}
+
+为便于跨模式比较，本文把规划质量拆分为四个可度量维度。设数据集字段全集为 $\mathcal{C}(D)$，计划中被显式引用的字段集合为 $\mathcal{C}(P)=\bigcup_i S_i$，计划中出现的方法集合为 $\mathcal{M}(P)=\{m_i\}$，问题 $q$ 所要求的分析意图集合为 $\mathcal{A}(q)$，计划实际覆盖的分析意图集合为 $\mathcal{A}(P)$，则有：
+\[
+\mathrm{Cov}(P,D)=\frac{|\mathcal{C}(P)|}{|\mathcal{C}(D)|},
+\]
+\[
+\mathrm{EC}(P)=\frac{1}{n}\sum_{i=1}^{n}\mathbf{1}(|S_i|>0),
+\]
+\[
+\mathrm{MD}(P)=\frac{|\mathcal{M}(P)|}{n},
+\]
+\[
+\mathrm{TC}(P,q)=\frac{|\mathcal{A}(P)\cap \mathcal{A}(q)|}{|\mathcal{A}(q)|}.
+\]
+
+其中，$\mathrm{Cov}$ 衡量字段覆盖度，$\mathrm{EC}$ 衡量证据耦合程度，$\mathrm{MD}$ 衡量方法多样性，$\mathrm{TC}$ 衡量任务覆盖度。迭代精化阶段的目标是利用执行反馈 $F$ 提升这些指标，而不仅是消除脚本级报错。
+
+\subsection{优化目标与约束}
+
+基于上述定义，本文将规划问题写为如下受约束优化目标：
+\[
+\max_{P} \ Q(P)=w_1\mathrm{Cov}(P,D)+w_2\mathrm{EC}(P)+w_3\mathrm{MD}(P)+w_4\mathrm{TC}(P,q),
+\]
+\[
+\text{s.t.}\quad \mathrm{Cost}(P)\leq B,\quad \mathrm{Valid}(P,K)=1,\quad \mathrm{Exec}(P,D)\geq \tau .
+\]
+
+其中，$\mathrm{Cost}(P)$ 表示预算消耗，$\mathrm{Valid}(P,K)$ 表示计划是否满足知识约束，$\mathrm{Exec}(P,D)$ 表示计划在给定数据集上的可执行性下界，$\tau$ 为最小可执行性阈值。若首轮计划 $P$ 在执行后暴露出证据缺口或方法失配，则系统使用反馈 $F$ 生成修订计划 $P'$，以在同一约束集合下获得更高的 $Q(P')$。

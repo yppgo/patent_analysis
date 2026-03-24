@@ -1,0 +1,24 @@
+\begin{table}[htbp]
+\centering
+\caption{四方案关键自动化指标对比（5 问题 $\times$ 5 次重复的均值 $\pm$ 标准差）}
+\label{tab:jos-main-auto}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+指标 & D\_baseline0 & A\_template & B\_data\_aware & C\_iterative \\
+\midrule
+数据列覆盖率 & 0.264 ± 0.066 & 0.251 ± 0.060 & 0.275 ± 0.068 & 0.375 ± 0.084 \\
+方法多样性 & 2.720 ± 0.542 & 2.800 ± 0.577 & 2.720 ± 0.458 & 5.120 ± 0.666 \\
+针对性引用数 & 0.920 ± 1.115 & 1.880 ± 2.333 & 8.440 ± 4.744 & 14.080 ± 5.492 \\
+参数丰富度 & 5.760 ± 1.899 & 5.000 ± 1.732 & 4.960 ± 2.091 & 11.440 ± 2.815 \\
+生成任务总数 & 2.880 ± 0.526 & 2.880 ± 0.526 & 2.800 ± 0.408 & 5.160 ± 0.746 \\
+代码执行成功率 & 1.000 ± 0.000 & 1.000 ± 0.000 & 1.000 ± 0.000 & 1.000 ± 0.000 \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{0.3em}
+\begin{minipage}{0.96\linewidth}
+\footnotesize\raggedright
+注：本表只保留与规划质量最直接相关的核心结构指标；完整指标集合见补充材料。
+\end{minipage}
+\end{table}

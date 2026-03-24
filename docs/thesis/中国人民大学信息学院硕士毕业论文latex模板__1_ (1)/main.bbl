@@ -1,0 +1,283 @@
+\begin{thebibliography}{10}
+
+\bibitem{basberg1987patents}
+B~L Basberg.
+\newblock Patents and the measurement of technological change: a survey of the
+  literature.
+\newblock {\em Research Policy}, 16(2-4):131--141, 1987.
+
+\bibitem{trajtenberg1990penny}
+M~Trajtenberg.
+\newblock A penny for your quotes: patent citations and the value of
+  innovations.
+\newblock {\em The RAND Journal of Economics}, 21(1):172--187, 1990.
+
+\bibitem{daim2006forecasting}
+T~U Daim, G~Rueda, H~Martin, et~al.
+\newblock Forecasting emerging technologies: use of bibliometrics and patent
+  analysis.
+\newblock {\em Technological Forecasting and Social Change}, 73(8):981--1012,
+  2006.
+
+\bibitem{griliches1990patent}
+Z~Griliches.
+\newblock Patent statistics as economic indicators: a survey.
+\newblock {\em Journal of Economic Literature}, 28(4):1661--1707, 1990.
+
+\bibitem{narin1997increasing}
+F~Narin, K~S Hamilton, and D~Olivastro.
+\newblock The increasing linkage between u.s. technology and public science.
+\newblock {\em Research Policy}, 26(3):317--330, 1997.
+
+\bibitem{zhu2014patent}
+朱东华, 汪雪锋, 乔晗, et~al.
+\newblock 专利信息分析方法与应用研究综述.
+\newblock {\em 情报学报}, 33(12):1322--1332, 2014.
+
+\bibitem{hall2001nber}
+B~H Hall, A~B Jaffe, and M~Trajtenberg.
+\newblock The nber patent citation data file: lessons, insights and
+  methodological tools.
+\newblock Working Paper 8498, National Bureau of Economic Research, 2001.
+
+\bibitem{jaffe2000knowledge}
+A~B Jaffe, M~Trajtenberg, and M~S Fogarty.
+\newblock Knowledge spillovers and patent citations: evidence from a survey of
+  inventors.
+\newblock {\em American Economic Review}, 90(2):215--218, 2000.
+
+\bibitem{vanzeebroeck2011filing}
+N~van Zeebroeck and B~van Pottelsberghe de~la Potterie.
+\newblock Filing strategies and patent value.
+\newblock {\em Economics of Innovation and New Technology}, 20(6):539--561,
+  2011.
+
+\bibitem{mejia2024patent}
+C~Mejia and Y~Kajikawa.
+\newblock Patent research in academic literature: landscape and trends with a
+  focus on patent analytics.
+\newblock {\em Frontiers in Research Metrics and Analytics}, 9:1484685, 2024.
+
+\bibitem{zhao2024llm}
+赵鑫, 李军毅, 周昆, et~al.
+\newblock 大语言模型综述.
+\newblock {\em 中国科学: 信息科学}, 54(8):1637--1676, 2024.
+
+\bibitem{brown2020language}
+T~B Brown, B~Mann, N~Ryder, et~al.
+\newblock Language models are few-shot learners.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  volume~33, pages 1877--1901, 2020.
+
+\bibitem{guo2024dsagent}
+S~Guo, B~Chen, C~Sun, et~al.
+\newblock Ds-agent: automated data science by empowering large language models
+  with case-based reasoning.
+\newblock In {\em International Conference on Machine Learning (ICML)}, 2024.
+
+\bibitem{hong2025data}
+S~Hong, Y~Lin, B~Liu, et~al.
+\newblock Data interpreter: an llm agent for data science.
+\newblock In {\em Findings of the Association for Computational Linguistics
+  (ACL)}, 2025.
+
+\bibitem{wu2023autogen}
+Q~Wu, G~Bansal, J~Zhang, et~al.
+\newblock Autogen: enabling next-gen llm applications via multi-agent
+  conversation.
+\newblock arXiv preprint arXiv:2308.08155, 2023.
+
+\bibitem{hong2024metagpt}
+S~Hong, M~Zhuge, J~Chen, et~al.
+\newblock Metagpt: meta programming for a multi-agent collaborative framework.
+\newblock In {\em International Conference on Learning Representations (ICLR)},
+  2024.
+
+\bibitem{wang2024survey}
+L~Wang, C~Ma, X~Feng, et~al.
+\newblock A survey on large language model based autonomous agents.
+\newblock {\em Frontiers of Computer Science}, 18(6):186345, 2024.
+
+\bibitem{sun2025survey}
+M~Sun, R~Han, B~Jiang, et~al.
+\newblock A survey on large language model-based agents for statistics and data
+  science.
+\newblock {\em The American Statistician}, 2025.
+
+\bibitem{edge2024graphrag}
+D~Edge, H~Trinh, N~Cheng, et~al.
+\newblock From local to global: a graphrag approach to query-focused
+  summarization.
+\newblock Microsoft Research, arXiv preprint arXiv:2404.16130, 2024.
+
+\bibitem{pan2024unifying}
+S~Pan, L~Luo, Y~Wang, et~al.
+\newblock Unifying large language models and knowledge graphs: a roadmap.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering},
+  36(7):3580--3599, 2024.
+
+\bibitem{wang2024evopat}
+S~Wang, X~Yin, M~Wang, et~al.
+\newblock Evopat: a multi-llm-based patents summarization and analysis agent.
+\newblock arXiv preprint arXiv:2412.18100, 2024.
+
+\bibitem{deng2025klipa}
+G~Deng, Y~Xie, Y~K Ng, et~al.
+\newblock Klipa: a knowledge graph and llm-driven qa framework for ip analysis.
+\newblock arXiv preprint arXiv:2509.07860, 2025.
+
+\bibitem{jiang2025natural}
+L~Jiang and S~M Goetz.
+\newblock Natural language processing in the patent domain: a survey.
+\newblock {\em Artificial Intelligence Review}, 58:168, 2025.
+
+\bibitem{liu2016knowledge}
+刘峤, 李杨, 段宏, et~al.
+\newblock 知识图谱构建技术综述.
+\newblock {\em 计算机研究与发展}, 53(3):582--600, 2016.
+
+\bibitem{langgraph2024}
+Langgraph: multi-actor orchestration framework for llm applications.
+\newblock GitHub, 2024.
+\newblock \url{https://github.com/langchain-ai/langgraph}.
+
+\bibitem{zheng2023judging}
+L~Zheng, W~L Chiang, Y~Sheng, et~al.
+\newblock Judging llm-as-a-judge with mt-bench and chatbot arena.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  volume~36, pages 46595--46623, 2023.
+
+\bibitem{zhang2025data}
+R~Zhang and M~Elhamod.
+\newblock Data-to-dashboard: multi-agent llm framework for insightful
+  visualization in enterprise analytics.
+\newblock arXiv preprint arXiv:2505.23695, 2025.
+
+\bibitem{yao2023react}
+S~Yao, J~Zhao, D~Yu, et~al.
+\newblock React: synergizing reasoning and acting in language models.
+\newblock In {\em International Conference on Learning Representations (ICLR)},
+  2023.
+
+\bibitem{shinn2024reflexion}
+N~Shinn, F~Cassano, A~Gopinath, et~al.
+\newblock Reflexion: language agents with verbal reinforcement learning.
+\newblock {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  36, 2023.
+
+\bibitem{li2023camel}
+G~Li, H~A A~K Hammoud, H~Itani, et~al.
+\newblock Camel: communicative agents for "mind" exploration of large language
+  model society.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  volume~36, pages 51991--52008, 2023.
+
+\bibitem{liu2023agentbench}
+X~Liu, H~Yu, H~Zhang, et~al.
+\newblock Agentbench: evaluating llms as agents.
+\newblock {\em arXiv preprint arXiv:2308.03688}, 2023.
+
+\bibitem{chase2022langchain}
+H~Chase.
+\newblock Langchain.
+\newblock GitHub, 2022.
+\newblock \url{https://github.com/langchain-ai/langchain}.
+
+\bibitem{xi2023rise}
+Z~Xi, W~Chen, X~Guo, et~al.
+\newblock The rise and potential of large language model based agents: a
+  survey.
+\newblock {\em arXiv preprint arXiv:2309.07864}, 2023.
+
+\bibitem{schick2024toolformer}
+T~Schick, J~Dwivedi-Yu, R~Dess{\`\i}, et~al.
+\newblock Toolformer: language models can teach themselves to use tools.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  volume~36, 2023.
+
+\bibitem{qin2023tool}
+Y~Qin, S~Liang, Y~Ye, et~al.
+\newblock Tool learning with foundation models.
+\newblock In {\em arXiv preprint arXiv:2304.08354}, 2023.
+
+\bibitem{mialon2023augmented}
+G~Mialon, R~Dess{\`\i}, M~Lomeli, et~al.
+\newblock Augmented language models: a survey.
+\newblock {\em Transactions on Machine Learning Research}, 2023.
+
+\bibitem{wang2023voyager}
+G~Wang, Y~Xie, Y~Jiang, et~al.
+\newblock Voyager: an open-ended embodied agent with large language models.
+\newblock {\em arXiv preprint arXiv:2305.16291}, 2023.
+
+\bibitem{park2023generative}
+J~S Park, J~C O'Brien, C~J Cai, et~al.
+\newblock Generative agents: interactive simulacra of human behavior.
+\newblock In {\em ACM Symposium on User Interface Software and Technology},
+  pages 1--22, 2023.
+
+\bibitem{park2012visualization}
+H~Park, J~Yoon, and K~Kim.
+\newblock Visualization of patent analysis for emerging technology.
+\newblock {\em Expert Systems with Applications}, 39(3):2804--2812, 2012.
+
+\bibitem{lee2015technology}
+C~Lee, O~Kwon, M~Kim, et~al.
+\newblock Technology clustering based on evolutionary patterns: the case of
+  information and communications technologies.
+\newblock {\em Technological Forecasting and Social Change}, 100:192--203,
+  2015.
+
+\bibitem{chen2004university}
+Y~Chen and K~C Chang.
+\newblock University patents and the effects on university-industry technology
+  transfer.
+\newblock {\em The Journal of Technology Transfer}, 29(3-4):331--338, 2004.
+
+\bibitem{gao2023retrieval}
+Y~Gao, Y~Xiong, X~Gao, et~al.
+\newblock Retrieval-augmented generation for large language models: a survey.
+\newblock {\em arXiv preprint arXiv:2312.10997}, 2023.
+
+\bibitem{ji2023survey}
+Z~Ji, N~Lee, R~Frieske, et~al.
+\newblock Survey of hallucination in natural language generation.
+\newblock {\em ACM Computing Surveys}, 55(12):1--38, 2023.
+
+\bibitem{zhang2023siren}
+Y~Zhang, Y~Li, L~Cui, et~al.
+\newblock Siren's song in the ai ocean: a survey on hallucination in large
+  language models.
+\newblock {\em arXiv preprint arXiv:2309.01219}, 2023.
+
+\bibitem{zhou2024hypothesis}
+Y~Zhou, H~Liu, T~Srivastava, et~al.
+\newblock Hypothesis generation with large language models.
+\newblock In {\em Workshop on NLP for Science (NLP4Science), ACL}, pages
+  117--139, 2024.
+
+\bibitem{kim2023language}
+W~Kim, B~Son, and I~Kim.
+\newblock Language models as knowledge bases for visual word sense
+  disambiguation.
+\newblock {\em arXiv preprint arXiv:2310.01960}, 2023.
+
+\bibitem{wu2024brief}
+Y~Wu, E~Winston, D~Kaushik, et~al.
+\newblock A brief history of domain adaptation.
+\newblock {\em arXiv preprint arXiv:2404.07111}, 2024.
+
+\bibitem{yamada2025aiscientist}
+Y~Yamada, R~T Lange, C~Lu, et~al.
+\newblock The ai scientist-v2: workshop-level automated scientific discovery
+  via agentic tree search.
+\newblock arXiv preprint arXiv:2504.08066, 2025.
+
+\bibitem{zheng2025automation}
+T~Zheng, Z~Deng, H~T Tsang, et~al.
+\newblock From automation to autonomy: a survey on large language models in
+  scientific discovery.
+\newblock In {\em Conference on Empirical Methods in Natural Language
+  Processing (EMNLP)}, pages 17744--17761, 2025.
+
+\end{thebibliography}

@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{组件消融 LLM-as-Judge 评分对比（5 问题 $\times$ 5 次重复的均值 $\pm$ 标准差）}
+\label{tab:jos-ablation-llm}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llll}
+\toprule
+维度 & C\_iterative & E\_ablate\_data & F\_ablate\_kg \\
+\midrule
+相关性 & 4.80 ± 0.41 & 4.72 ± 0.46 & 4.80 ± 0.41 \\
+针对性 & 4.80 ± 0.50 & 4.32 ± 0.56 & 4.84 ± 0.47 \\
+方法合理性 & 4.76 ± 0.52 & 4.44 ± 0.51 & 4.44 ± 0.71 \\
+创新性 & 4.68 ± 0.56 & 3.72 ± 0.46 & 4.72 ± 0.54 \\
+深度 & 4.76 ± 0.52 & 4.52 ± 0.51 & 4.32 ± 0.63 \\
+总分(/25) & 23.80 ± 2.12 & 21.72 ± 2.01 & 23.12 ± 2.17 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

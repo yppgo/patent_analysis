@@ -1,0 +1,66 @@
+\IfFileExists{jos.cls}{
+  \documentclass{jos}
+}{
+  \documentclass[UTF8,12pt]{ctexart}
+}
+
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{xcolor}
+
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black}
+\setlist[itemize]{leftmargin=1.8em}
+\graphicspath{{figures/}}
+
+\newcommand{\safeincludegraphics}[2][0.9\textwidth]{%
+  \IfFileExists{#2}{%
+    \includegraphics[width=#1]{#2}%
+  }{%
+    \fbox{\parbox[c][4cm][c]{0.78\textwidth}{\centering 图文件待生成：\texttt{\detokenize{#2}}}}%
+  }%
+}
+
+\title{数据感知与知识约束协同的多智能体分析规划框架\\及其在专利分析中的验证}
+\author{作者匿名}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+针对现有大语言模型分析系统在“执行阶段可自动化、规划阶段仍依赖人工设计”的问题，本文提出一种面向结构化分析任务的数据感知与知识约束协同的多智能体分析规划框架。该框架以证据锚定（Evidence Grounding）、知识约束规划（Knowledge-Constrained Planning）和迭代精化（Iterative Refinement）三项机制为核心，将数据事实、领域知识与执行反馈统一纳入规划过程，并输出可执行、可追踪、可复验的结构化分析计划。本文以专利分析为主要验证场景，构建由规划智能体、规格化智能体、执行智能体和评审智能体组成的工作流系统，并按“内部渐进与消融、外部机制基线、子领域稳定性、跨领域初步验证、人工盲评”组织投稿级证据链。当前已冻结的内部 90 组重复实验与已完成的外部机制基线表明：完整模式在总体质量和稳定性上均优于其余内部方案，数据感知显著提升方案的针对性引用与证据耦合程度，两轮迭代决定系统可达到的性能上限，知识图谱贡献则表现为平均正向但任务依赖。本文将多智能体分析系统的研究重点由“执行正确性”前移到“规划合理性”，为面向结构化数据分析任务的智能规划系统提供了一条可复验的软件方法实现路径。
+\end{abstract}
+
+\noindent\textbf{关键词：}多智能体系统；数据感知；知识图谱；分析规划；专利分析
+
+\begin{center}
+\textbf{A Data-Aware and Knowledge-Constrained Multi-Agent Analytical Planning Framework\\for Structured Analysis Tasks and Its Validation in Patent Analytics}
+\end{center}
+
+\noindent\textbf{Abstract:} This paper studies a gap in current LLM-based analytical systems: execution can be automated, while analytical planning still depends heavily on handcrafted prompts. To address this gap, we propose a multi-agent analytical planning framework for structured analysis tasks. The framework integrates three mechanisms, namely Evidence Grounding, Knowledge-Constrained Planning, and Iterative Refinement, to align planning with observed data evidence, domain knowledge, and execution feedback. We instantiate the framework in a patent analytics workflow with planner, specification, coding, and review agents, and organize the evaluation protocol into progressive internal comparisons, component ablations, external mechanism baselines, subdomain stability validation, cross-domain pilot validation, and human blind review. The currently frozen internal repeated experiments and completed external mechanism baselines show that the full configuration is consistently the strongest and most stable setting among internal variants; data awareness improves evidence coupling and task specificity, iterative refinement determines the attainable performance ceiling, and knowledge constraints provide positive but task-dependent gains. These findings shift the emphasis of analytical agent research from execution correctness to planning quality and offer a reproducible software methodology for structured analytical planning.\\
+\textbf{Key words:} multi-agent systems; data-aware planning; knowledge constraints; analytical planning; patent analytics
+
+\input{sections/01_introduction.tex}
+\input{sections/02_related_work.tex}
+\input{sections/03_problem_definition.tex}
+\input{sections/04_method_framework.tex}
+\input{sections/05_system_implementation.tex}
+\input{sections/06_experiment_design.tex}
+\input{sections/07_results_discussion.tex}
+\input{sections/08_threats.tex}
+\input{sections/09_conclusion.tex}
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}

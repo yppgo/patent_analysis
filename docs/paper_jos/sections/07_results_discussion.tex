@@ -1,0 +1,142 @@
+\section{实验结果与讨论}
+
+\subsection{六模式总览}
+
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.92\textwidth]{fig4_six_mode_overview.png}
+\caption{六模式总览（仅作全局观察）}
+\label{fig:six-overview}
+\end{figure}
+
+六模式总览显示，\texttt{C\_iterative} 在当前重复实验中保持最高平均总分（23.87 $\pm$ 1.77），\texttt{E\_ablate\_data} 与 \texttt{F\_ablate\_kg} 处于第二梯队，\texttt{B\_data\_aware} 位于中间位置，而 \texttt{A\_template} 与 \texttt{D\_baseline0} 相对较低且彼此接近。需要强调的是，本图只用于全局观察，不承担机制归因；真正的归因仍应依赖四方案主实验和组件消融。
+
+\subsection{主实验：四方案渐进叠加}
+
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.82\textwidth]{fig3_main_total_scores.png}
+\caption{四方案主实验总分对比}
+\label{fig:main-total}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.72\textwidth]{fig5_main_radar.png}
+\caption{四方案五维评分雷达图}
+\label{fig:main-radar}
+\end{figure}
+
+\IfFileExists{generated/table_main_llm.tex}{\input{generated/table_main_llm.tex}}{\par 主实验 LLM 汇总表待生成。}
+\IfFileExists{generated/table_main_auto.tex}{\input{generated/table_main_auto.tex}}{\par 主实验自动化指标表待生成。}
+\IfFileExists{generated/table_question_main.tex}{\input{generated/table_question_main.tex}}{\par 主实验问题级表待生成。}
+
+主实验反映出两个稳定结论。第一，\texttt{B\_data\_aware} 相比 \texttt{A\_template} 和 \texttt{D\_baseline0} 能够稳定提升针对性和总分，说明数据感知使系统从“问题语义驱动”转向“数据证据驱动”。第二，\texttt{C\_iterative} 相比 \texttt{B\_data\_aware} 在五个语义维度和多个结构指标上都进一步拉开差距，表明两轮迭代并不是简单堆叠任务数量，而是实质提高了方案的深度和方法组织能力。
+
+值得注意的是，当前重复实验并不支持将 \texttt{A\_template} 稳定写成优于 \texttt{D\_baseline0} 的强结论。\texttt{A\_template} 确实在结构性上提供了一定先验，但如果缺乏数据感知和执行反馈，其收益仍不足以形成稳定梯度。
+
+\subsection{组件消融}
+
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.88\textwidth]{fig6_ablation_total.png}
+\caption{组件消融结果：总分与针对性引用数}
+\label{fig:ablation-total}
+\end{figure}
+
+\IfFileExists{generated/table_ablation_llm.tex}{\input{generated/table_ablation_llm.tex}}{\par 消融实验 LLM 汇总表待生成。}
+\IfFileExists{generated/table_ablation_auto.tex}{\input{generated/table_ablation_auto.tex}}{\par 消融实验自动化指标表待生成。}
+\IfFileExists{generated/table_question_ablation.tex}{\input{generated/table_question_ablation.tex}}{\par 消融实验问题级表待生成。}
+
+组件消融进一步说明了完整系统的性能来源。对比 \texttt{C\_iterative} 与 \texttt{E\_ablate\_data} 可见，移除数据感知后，针对性引用数由 14.20 降至 3.00，总分也同步下降。这说明数据感知并不是简单增加上下文长度，而是直接改变规划起点。对比 \texttt{C\_iterative} 与 \texttt{F\_ablate\_kg} 则可见，知识图谱在平均意义上仍提供正向收益，但该收益具有任务依赖性：在开放度更高的问题上，较弱的图谱约束可能释放探索空间；而在结构锚点清晰、需要链式推理的问题上，图谱对变量组织与方法选择的约束更能带来稳定优势。
+
+\subsection{外部机制基线比较}
+
+\IfFileExists{figures/fig7_external_total.png}{
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.84\textwidth]{fig7_external_total.png}
+\caption{完整系统与外部机制基线总分对比}
+\label{fig:external-total}
+\end{figure}
+}{}
+
+\IfFileExists{generated/table_external_llm.tex}{\input{generated/table_external_llm.tex}}{\par 外部基线 LLM 汇总表待生成。}
+\IfFileExists{generated/table_external_auto.tex}{\input{generated/table_external_auto.tex}}{\par 外部基线自动化指标表待生成。}
+\IfFileExists{generated/table_external_question.tex}{\input{generated/table_external_question.tex}}{\par 外部基线问题级表待生成。}
+\IfFileExists{generated/table_external_significance.tex}{\input{generated/table_external_significance.tex}}{\par 外部基线显著性表待生成。}
+
+\IfFileExists{generated/table_external_llm.tex}{
+外部机制基线节用于回答一个不同于内部消融的问题：如果只采用单智能体一次性规划，或只采用执行反馈驱动再规划，而不显式引入数据感知与知识约束闭环，系统是否已经能够达到与完整方法相近的稳定性。当前已完成的 30 组外部机制基线已锁定 \texttt{H\_execution\_feedback} 为当前 strongest external mechanism baseline，且 \texttt{C\_iterative} 在总分均值和稳定性上均优于 \texttt{G/H}。正文在这一节只引用外部证据池及与之对齐的 \texttt{C\_iterative} 汇总，不把主实验和外部机制基线的原始结果直接混成一个未分层的大表。正式数值以图~\ref{fig:external-total} 及外部机制基线表为准；5 问题口径的最终结果将在增强版实验完成后替换当前 3 问题版本。
+}{
+本节已经预留外部机制基线图表与显著性表接口。若当前编译版本尚未显示对应表图，表示 \texttt{\detokenize{outputs/repeated_experiments_external_main/}} 的正式汇总或导出仍在进行中；在结果落地之前，正文不对 \texttt{C\_iterative} 与 \texttt{G/H} 的优劣关系做超出数据的书面结论。
+}
+
+\subsection{子领域稳定性验证}
+
+\IfFileExists{figures/fig8_transfer_total.png}{
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.84\textwidth]{fig8_transfer_total.png}
+\caption{子领域稳定性验证总分对比}
+\label{fig:transfer-total}
+\end{figure}
+}{}
+
+\IfFileExists{generated/table_transfer_llm.tex}{\input{generated/table_transfer_llm.tex}}{\par 子领域稳定性验证 LLM 汇总表待生成。}
+\IfFileExists{generated/table_transfer_auto.tex}{\input{generated/table_transfer_auto.tex}}{\par 子领域稳定性验证自动化指标表待生成。}
+\IfFileExists{generated/table_transfer_question.tex}{\input{generated/table_transfer_question.tex}}{\par 子领域稳定性验证问题级表待生成。}
+\IfFileExists{generated/table_transfer_significance.tex}{\input{generated/table_transfer_significance.tex}}{\par 子领域稳定性验证显著性表待生成。}
+
+\IfFileExists{generated/table_transfer_llm.tex}{
+子领域稳定性验证用于检验完整系统的优势是否能在相邻技术子领域中保持。该节只比较 \texttt{D\_baseline0}、\texttt{B\_data\_aware}、\texttt{C\_iterative} 和 strongest external mechanism baseline，不再引入全部六模式，从而把讨论聚焦到“完整系统是否仍是最稳选择”这一问题。若子领域数据集中的模式排序与主数据集一致，则说明本文方法并非只对单一主数据集过拟合；若出现局部偏移，则需要结合问题级结果分析不同子领域中的证据结构差异。需要强调的是，这一设置只能支撑“子领域稳定性”，不支撑强跨领域泛化。
+}{
+当前旧批次 \texttt{transfer\_iot\_auto} 结果因大量失败已整体作废，不能进入正文。增强版路线将以 \texttt{D/B/C/H}、5 问题、3 重复的 60 组设计重跑该证据池，并仅将其写作“子领域稳定性验证”；在正式结果落地前，正文不提前写入优劣结论。
+}
+
+\subsection{跨领域初步验证}
+
+\IfFileExists{figures/fig9_cross_domain_total.png}{
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.78\textwidth]{fig9_cross_domain_total.png}
+\caption{跨领域初步验证总分对比}
+\label{fig:cross-domain-total}
+\end{figure}
+}{}
+
+\IfFileExists{generated/table_cross_domain_llm.tex}{\input{generated/table_cross_domain_llm.tex}}{\par 跨领域初步验证 LLM 汇总表待生成。}
+\IfFileExists{generated/table_cross_domain_question.tex}{\input{generated/table_cross_domain_question.tex}}{\par 跨领域初步验证问题级表待生成。}
+
+\IfFileExists{generated/table_cross_domain_llm.tex}{
+跨领域初步验证用于回答一个更严格的问题：当数据从专利分析切换到软件工程 Bugzilla 缺陷数据时，完整系统相较纯 LLM 基线是否仍然保持优势。由于该部分只比较 \texttt{D\_baseline0} 与 \texttt{C\_iterative}，且默认不复用专利知识图谱，因此它更适合作为“框架降级后是否仍稳健”的证据，而不是对知识图谱跨领域迁移能力的直接证明。
+}{
+跨领域初步验证的注册表、数据物化脚本和表图接口已经接入工作区，但当前尚无可用 Bugzilla 证据。正式稿中，这一节只会在真实 18 组实验完成后写入结果，不会用主数据集或子领域数据代替跨领域证据。
+}
+
+\subsection{统计结果}
+
+\IfFileExists{generated/table_significance.tex}{\input{generated/table_significance.tex}}{\par 主实验显著性表待生成。}
+
+当前内部证据已经补充 Friedman 与 Wilcoxon 检验，并为关键配对比较报告 bootstrap 置信区间和 rank-biserial correlation。统计检验的作用不是把论文写成“所有差异都显著”的故事，而是把当前可发表结论限定在真正有重复支持的范围内。就已冻结的 90 组主证据而言，最稳的结论依然是：数据感知提供稳定增益，两轮迭代决定性能上限，知识图谱平均上有帮助但收益依赖任务结构。
+
+\subsection{人工盲评与讨论}
+
+\IfFileExists{figures/fig10_human_review.png}{
+\begin{figure}[H]
+\centering
+\safeincludegraphics[0.82\textwidth]{fig10_human_review.png}
+\caption{人工盲评总体评分对比}
+\label{fig:human-review}
+\end{figure}
+}{}
+
+\IfFileExists{generated/table_human_review.tex}{\input{generated/table_human_review.tex}}{\par 人工盲评汇总表待生成。}
+
+\IfFileExists{generated/table_human_review.tex}{
+人工盲评用于补足 LLM-as-Judge 的外部视角。由于盲评对象被限制为匿名化 blueprint 而非执行代码，这一结果更接近人类评审者对“规划质量本身”的判断，而不是对脚本调试能力的判断。若人工盲评与自动汇总方向一致，则说明完整系统的优势不仅体现在模型互评分数上，也体现在人类对方案针对性、深度和可执行性的直观认可上。
+}{
+人工盲评材料包、匿名映射和评审模板已经接入工作区。若当前编译版本尚未显示盲评分数，表示真实评审表尚未回收或尚未汇总；这一状态会在有效性威胁中明确说明，而不会被写成已经完成的人类验证。
+}
+
+从机制上看，三项能力分别对应不同层级的问题。数据感知回答“当前数据最值得看什么”，知识图谱回答“面对这类证据通常该怎么分析”，两轮迭代回答“首轮方案不足时如何继续深化”。如果只保留其中任意两个组件，系统仍可能在某些问题上取得较高分数；但若要在多类问题上同时保持高针对性、高方法合理性与高深度，完整配置仍是目前证据支持下最稳妥的选择。
